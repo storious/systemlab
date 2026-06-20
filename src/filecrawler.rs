@@ -10,7 +10,9 @@ pub fn crawl(root: &Path) -> std::io::Result<Vec<PathBuf>> {
 
 fn crawl_inner(path: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
     if path.is_file() {
-        files.push(path.to_path_buf());
+        if is_indexable_file(path) {
+            files.push(path.to_path_buf());
+        }
         return Ok(());
     }
 
@@ -22,6 +24,13 @@ fn crawl_inner(path: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+fn is_indexable_file(path: &std::path::Path) -> bool {
+    matches!(
+        path.extension().and_then(|ext| ext.to_str()),
+        Some("txt" | "html" | "htm" | "rs" | "c" | "cc" | "cpp" | "h" | "hpp" | "md")
+    )
 }
 
 #[cfg(test)]
@@ -71,5 +80,21 @@ mod tests {
         let files = crawl(dir.path()).unwrap();
 
         assert!(files.is_empty());
+    }
+
+    #[test]
+    fn indexable_file_extensions_are_accepted() {
+        assert!(is_indexable_file(Path::new("a.txt")));
+        assert!(is_indexable_file(Path::new("a.html")));
+        assert!(is_indexable_file(Path::new("main.rs")));
+        assert!(is_indexable_file(Path::new("README.md")));
+    }
+
+    #[test]
+    fn binary_file_extensions_are_rejected() {
+        assert!(!is_indexable_file(Path::new("a.o")));
+        assert!(!is_indexable_file(Path::new("a.a")));
+        assert!(!is_indexable_file(Path::new("a.pdf")));
+        assert!(!is_indexable_file(Path::new("a.gz")));
     }
 }

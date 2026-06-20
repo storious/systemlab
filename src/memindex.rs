@@ -4,11 +4,6 @@ use std::collections::HashMap;
 pub(crate) type Term = String;
 pub(crate) type Position = u64;
 
-struct SearchResult {
-    doc_id: u64, // a document that matches a search query
-    rank: u32,   // an indicator of the quality of the match
-}
-
 #[derive(Debug, Default)]
 pub struct InvertedIndex {
     terms: HashMap<Term, HashMap<DocId, Vec<Position>>>,
@@ -34,6 +29,10 @@ impl InvertedIndex {
 
     pub fn lookup(&self, word: &str) -> Option<&HashMap<DocId, Vec<Position>>> {
         self.terms.get(word)
+    }
+    pub fn contains_doc(&self, word: &str, doc_id: DocId) -> bool {
+        self.lookup(word)
+            .is_some_and(|postings| postings.contains_key(&doc_id))
     }
 }
 

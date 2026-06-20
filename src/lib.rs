@@ -1,6 +1,6 @@
 pub mod doctable;
+pub mod engine;
 pub mod filecrawler;
 pub mod fileparser;
 pub mod memindex;
-
-pub(crate) mod query;
+pub mod query;
