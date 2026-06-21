@@ -9,6 +9,13 @@ pub struct InvertedIndex {
     terms: HashMap<Term, HashMap<DocId, Vec<Position>>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexStats {
+    pub terms: usize,
+    pub postings: usize,
+    pub total_positions: usize,
+}
+
 impl InvertedIndex {
     pub fn new() -> Self {
         Self {
@@ -40,6 +47,25 @@ impl InvertedIndex {
         self.lookup(term)
             .map(|position| position.len())
             .unwrap_or(0)
+    }
+
+    pub fn stats(&self) -> IndexStats {
+        let terms = self.terms.len();
+
+        let postings = self.terms.values().map(|docs| docs.len()).sum();
+
+        let total_positions = self
+            .terms
+            .values()
+            .flat_map(|docs| docs.values())
+            .map(|positions| positions.len())
+            .sum();
+
+        IndexStats {
+            terms,
+            postings,
+            total_positions,
+        }
     }
 }
 
@@ -106,5 +132,26 @@ mod tests {
         assert!(index.lookup("rust").is_some());
         assert!(index.lookup("memory").is_some());
         assert!(index.lookup("python").is_none());
+    }
+    #[test]
+    fn stats_counts_terms_postings_and_positions() {
+        let mut index = InvertedIndex::new();
+
+        index.add_document_tokens(
+            1,
+            vec![
+                ("rust".to_string(), 0),
+                ("rust".to_string(), 1),
+                ("memory".to_string(), 2),
+            ],
+        );
+
+        index.add_document_tokens(2, vec![("rust".to_string(), 0), ("system".to_string(), 1)]);
+
+        let stats = index.stats();
+
+        assert_eq!(stats.terms, 3);
+        assert_eq!(stats.postings, 4);
+        assert_eq!(stats.total_positions, 5);
     }
 }

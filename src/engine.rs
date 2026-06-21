@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::doctable::DocTable;
 use crate::filecrawler;
 use crate::fileparser;
+use crate::memindex::IndexStats;
 use crate::memindex::InvertedIndex;
 use crate::query::{QueryProcessor, SearchResult};
 
@@ -42,6 +43,14 @@ impl SearchEngine {
     pub fn search(&self, query: &str, mode: crate::query::QueryMode) -> Vec<SearchResult> {
         let processor = QueryProcessor::new(&self.index, &self.doctable);
         processor.search(query, mode)
+    }
+
+    pub fn stats(&self) -> IndexStats {
+        self.index.stats()
+    }
+
+    pub fn doc_count(&self) -> usize {
+        self.doctable.len()
     }
 }
 

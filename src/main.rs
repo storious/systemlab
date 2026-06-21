@@ -26,6 +26,15 @@ fn main() -> std::io::Result<()> {
 
     let mut engine = SearchEngine::new();
     engine.index_dir(Path::new(&root))?;
+    let stats = engine.stats();
+
+    eprintln!(
+        "indexed docs={} terms={} postings={} positions={}",
+        engine.doc_count(),
+        stats.terms,
+        stats.postings,
+        stats.total_positions,
+    );
 
     let results = engine.search(query, mode);
 

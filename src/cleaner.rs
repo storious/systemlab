@@ -1,5 +1,3 @@
-use std::usize;
-
 pub fn clean_project_gutenberg(text: &str) -> &str {
     let start = find_body_start(text).unwrap_or(0);
     let end = find_body_end(text).unwrap_or(text.len());
