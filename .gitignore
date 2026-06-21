@@ -3,3 +3,7 @@
 
 # custom
 docs/hw2/
+*.idx
+*.bin
+*.exe
+*.local
