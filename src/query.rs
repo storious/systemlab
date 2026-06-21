@@ -3,11 +3,11 @@ use crate::fileparser::tokenize;
 use crate::memindex::InvertedIndex;
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct SearchResult {
     pub doc_id: DocId,
     pub path: String,
-    pub score: usize,
+    pub score: f64,
 }
 
 pub struct QueryProcessor<'a> {
@@ -71,11 +71,14 @@ impl<'a> QueryProcessor<'a> {
                 continue;
             }
 
-            let mut score = positions.len();
+            let mut score = self.tf_idf(&terms[0], positions.len());
 
             for term in &terms[1..] {
                 if let Some(postings) = self.index.lookup(term) {
-                    score += postings.get(&doc_id).map(|p| p.len()).unwrap_or(0);
+                    score += postings
+                        .get(&doc_id)
+                        .map(|p| self.tf_idf(term, p.len()))
+                        .unwrap_or(0.0);
                 }
             }
 
@@ -89,7 +92,11 @@ impl<'a> QueryProcessor<'a> {
                 score,
             });
         }
-        results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.path.cmp(&b.path)));
+        results.sort_by(|a, b| {
+            b.score
+                .total_cmp(&a.score)
+                .then_with(|| a.path.cmp(&b.path))
+        });
 
         results
     }
@@ -106,23 +113,28 @@ impl<'a> QueryProcessor<'a> {
                 let Some(path) = self.doctable.get_path(doc_id) else {
                     continue;
                 };
+                let score = self.tf_idf(term, positions.len());
 
                 merged
                     .entry(doc_id)
                     .and_modify(|result| {
-                        result.score += positions.len();
+                        result.score += score;
                     })
                     .or_insert_with(|| SearchResult {
                         doc_id,
                         path: path.to_string(),
-                        score: positions.len(),
+                        score,
                     });
             }
         }
 
         let mut results: Vec<_> = merged.into_values().collect();
 
-        results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.path.cmp(&b.path)));
+        results.sort_by(|a, b| {
+            b.score
+                .total_cmp(&a.score)
+                .then_with(|| a.path.cmp(&b.path))
+        });
 
         results
     }
@@ -165,13 +177,29 @@ impl<'a> QueryProcessor<'a> {
             results.push(SearchResult {
                 doc_id,
                 path: path.to_string(),
-                score: phrase_count,
+                score: phrase_count as f64, // TODO BM25
             });
         }
 
-        results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.path.cmp(&b.path)));
+        results.sort_by(|a, b| {
+            b.score
+                .total_cmp(&a.score)
+                .then_with(|| a.path.cmp(&b.path))
+        });
 
         results
+    }
+
+    fn tf_idf(&self, term: &str, tf: usize) -> f64 {
+        let total_docs = self.doctable.len() as f64;
+        let df = self.index.document_frequency(term) as f64;
+        if total_docs == 0.0 || df == 0.0 {
+            return 0.0;
+        }
+
+        let idf = (total_docs / df).ln();
+
+        tf as f64 * idf
     }
 }
 
@@ -271,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn multi_term_query_accumulates_scores() {
+    fn rare_terms_get_positive_tfidf_score() {
         let mut doctable = DocTable::new();
         let mut index = InvertedIndex::new();
 
@@ -285,13 +313,16 @@ mod tests {
             ],
         );
 
+        let doc2 = doctable.add_document("b.txt".to_string());
+        index.add_document_tokens(doc2, vec![("rust".to_string(), 0)]);
+
         let qp = QueryProcessor::new(&index, &doctable);
-        let results = qp.search("rust memory", QueryMode::Any);
+        let results = qp.search("memory", QueryMode::Any);
 
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].score, 3);
+        assert_eq!(results[0].path, "a.txt");
+        assert!(results[0].score > 0.0);
     }
-
     #[test]
     fn phrase_query_matches_adjacent_terms() {
         let (doctable, index) = build_test_engine();
@@ -301,7 +332,7 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "a.txt");
-        assert_eq!(results[0].score, 1);
+        assert_eq!(results[0].score, 1.0);
     }
 
     #[test]

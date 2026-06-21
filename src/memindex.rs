@@ -30,9 +30,16 @@ impl InvertedIndex {
     pub fn lookup(&self, word: &str) -> Option<&HashMap<DocId, Vec<Position>>> {
         self.terms.get(word)
     }
+
     pub fn contains_doc(&self, word: &str, doc_id: DocId) -> bool {
         self.lookup(word)
             .is_some_and(|postings| postings.contains_key(&doc_id))
+    }
+
+    pub fn document_frequency(&self, term: &str) -> usize {
+        self.lookup(term)
+            .map(|position| position.len())
+            .unwrap_or(0)
     }
 }
 

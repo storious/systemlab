@@ -34,6 +34,20 @@ impl DocTable {
     pub fn get_path(&self, id: DocId) -> Option<&str> {
         self.id_to_path.get(&id).map(|s| s.as_str())
     }
+
+    pub fn len(&self) -> usize {
+        self.id_to_path.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.id_to_path.is_empty()
+    }
+}
+
+impl Default for DocTable {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
