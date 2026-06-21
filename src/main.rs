@@ -12,26 +12,53 @@ fn main() -> io::Result<()> {
 
     match args.next().as_deref() {
         Some("build") => {
-            let docs = args.next().unwrap_or_else(|| "./docs".to_string());
-            let index = args.next().unwrap_or_else(|| "searchfs.idx".to_string());
+            let Some(docs) = args.next() else {
+                print_usage();
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing docs path",
+                ));
+            };
+
+            let Some(index) = args.next() else {
+                print_usage();
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing index path",
+                ));
+            };
+
             run_build(&docs, &index)
         }
         Some("search") => {
-            let index = args.next().unwrap_or_else(|| "searchfs.idx".to_string());
-            let query = args.next().unwrap_or_else(|| "rust".to_string());
+            let Some(index) = args.next() else {
+                print_usage();
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing index path",
+                ));
+            };
+
+            let Some(query) = args.next() else {
+                print_usage();
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, "missing query"));
+            };
+
             let limit = args
                 .next()
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(10);
+
             let mode = args.next().unwrap_or_else(|| "and".to_string());
 
             run_search(&index, &query, limit, &mode)
         }
         _ => {
-            eprintln!("usage:");
-            eprintln!("  searchfs build <docs> <index>");
-            eprintln!("  searchfs search <index> <query> [limit] [and|or|phrase]");
-            Ok(())
+            print_usage();
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "unknown or missing command",
+            ))
         }
     }
 }
@@ -89,4 +116,15 @@ fn run_search(index_path: &str, query: &str, limit: usize, mode_arg: &str) -> io
     }
 
     Ok(())
+}
+
+fn print_usage() {
+    eprintln!("usage:");
+    eprintln!("  searchfs build <docs> <index>");
+    eprintln!("  searchfs search <index> <query> [limit] [and|or|phrase]");
+    eprintln!();
+    eprintln!("examples:");
+    eprintln!("  searchfs build docs searchfs.idx");
+    eprintln!("  searchfs search searchfs.idx \"rust memory\" 10 and");
+    eprintln!("  searchfs search searchfs.idx '\"white whale\"' 5");
 }

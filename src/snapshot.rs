@@ -51,4 +51,27 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert!(results[0].path.ends_with("a.txt"));
     }
+
+    #[test]
+    fn snapshot_save_and_load_roundtrip() {
+        let dir = tempdir().unwrap();
+
+        fs::write(dir.path().join("a.txt"), "rust memory safety").unwrap();
+
+        let mut engine = SearchEngine::new();
+        engine.index_dir(dir.path()).unwrap();
+
+        let snapshot_path = dir.path().join("searchfs.idx");
+
+        let snapshot = engine.into_snapshot();
+        save(&snapshot_path, &snapshot).unwrap();
+
+        let restored = load(&snapshot_path).unwrap();
+        let engine = SearchEngine::from_snapshot(restored);
+
+        let results = engine.search("rust memory", QueryMode::All);
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].path.ends_with("a.txt"));
+    }
 }
