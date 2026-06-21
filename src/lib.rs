@@ -1,7 +1,7 @@
+pub mod cleaner;
 pub mod doctable;
 pub mod engine;
 pub mod filecrawler;
 pub mod fileparser;
 pub mod memindex;
 pub mod query;
-pub mod cleaner;
