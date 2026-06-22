@@ -1,3 +1,7 @@
+# SearchFS
+
+![CI](https://github.com/storious/searchfs/actions/workflows/ci.yml/badge.svg)
+
 ## Usage
 
 Build an index:

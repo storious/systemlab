@@ -6,25 +6,25 @@ DOCS  := docs
 all: test build
 
 build:
-	cargo run -- build $(DOCS) $(INDEX)
+	@cargo run -- build $(DOCS) $(INDEX)
 
 rebuild:
-	rm -f $(INDEX)
-	cargo run -- build $(DOCS) $(INDEX)
+	@rm -f $(INDEX)
+	@cargo run -- build $(DOCS) $(INDEX)
 
 search:
-	cargo run -- search $(INDEX) "rust" 10 and
+	@cargo run -- search $(INDEX) "rust" 10 and
 
 test:
-	cargo fmt --check
-	cargo test
-	cargo clippy --all-targets -- -D warnings
+	@cargo fmt --check
+	@cargo test
+	@cargo clippy --all-targets -- -D warnings
 
 fmt:
-	cargo fmt
+	@cargo fmt
 
 lint:
-	cargo clippy --all-targets -- -D warnings
+	@cargo clippy --all-targets -- -D warnings
 
 clean:
-	rm -f *.idx *.bin
+	@rm -f *.idx *.bin
