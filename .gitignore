@@ -2,7 +2,9 @@
 
 
 # custom
+searchfs_index
 docs/hw2/
+tmp*
 *.idx
 *.bin
 *.exe

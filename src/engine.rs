@@ -6,6 +6,7 @@ use crate::fileparser;
 use crate::memindex::IndexStats;
 use crate::memindex::InvertedIndex;
 use crate::query::{QueryProcessor, SearchResult};
+use crate::segment::Segment;
 use crate::snapshot::IndexSnapshot;
 
 pub struct SearchEngine {
@@ -86,6 +87,21 @@ impl SearchEngine {
         }
 
         Ok(added)
+    }
+
+    pub fn into_segment(self, id: impl Into<String>) -> Segment {
+        Segment {
+            id: id.into(),
+            doctable: self.doctable,
+            index: self.index,
+        }
+    }
+
+    pub fn from_segment(segment: Segment) -> Self {
+        Self {
+            doctable: segment.doctable,
+            index: segment.index,
+        }
     }
 }
 

@@ -21,6 +21,10 @@ pub struct SegmentStore {
     root: PathBuf,
 }
 
+pub fn next_segment_id(manifest: &Manifest) -> String {
+    format!("seg_{:06}", manifest.segments.len() + 1)
+}
+
 impl SegmentStore {
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
@@ -116,5 +120,43 @@ mod tests {
         let restored = store.load_segment("seg_000001").unwrap();
 
         assert_eq!(restored.id, "seg_000001");
+    }
+
+    #[test]
+    fn segment_roundtrip_preserves_search_results() {
+        use crate::engine::SearchEngine;
+        use crate::query::QueryMode;
+        use std::fs;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+
+        fs::write(dir.path().join("a.txt"), "rust memory safety").unwrap();
+        fs::write(dir.path().join("b.txt"), "rust distributed system").unwrap();
+
+        let mut engine = SearchEngine::new();
+        engine.index_dir(dir.path()).unwrap();
+
+        let segment = engine.into_segment("seg_000001");
+        let store = SegmentStore::new(dir.path().join("index"));
+
+        store.save_segment(&segment).unwrap();
+
+        let restored = store.load_segment("seg_000001").unwrap();
+        let engine = SearchEngine::from_segment(restored);
+
+        let results = engine.search("rust memory", QueryMode::All);
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].path.ends_with("a.txt"));
+    }
+
+    #[test]
+    fn next_segment_id_uses_manifest_len() {
+        let manifest = Manifest {
+            segments: vec!["seg_000001".to_string(), "seg_000002".to_string()],
+        };
+
+        assert_eq!(next_segment_id(&manifest), "seg_000003");
     }
 }
