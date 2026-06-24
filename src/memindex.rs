@@ -5,7 +5,7 @@ use std::collections::HashMap;
 pub(crate) type Term = String;
 pub(crate) type Position = u64;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct InvertedIndex {
     terms: HashMap<Term, HashMap<DocId, Vec<Position>>>,
 }
@@ -67,6 +67,18 @@ impl InvertedIndex {
             postings,
             total_positions,
         }
+    }
+
+    pub fn terms(&self) -> impl Iterator<Item = &String> {
+        self.terms.keys()
+    }
+
+    pub fn postings_iter(&self) -> impl Iterator<Item = (&String, &HashMap<DocId, Vec<Position>>)> {
+        self.terms.iter()
+    }
+
+    pub fn insert_postings(&mut self, term: String, postings: HashMap<DocId, Vec<Position>>) {
+        self.terms.insert(term, postings);
     }
 }
 

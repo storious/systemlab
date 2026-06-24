@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 pub(crate) type DocId = u64;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DocTable {
     next_id: DocId,
     id_to_path: HashMap<DocId, String>,

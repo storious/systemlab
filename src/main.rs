@@ -5,7 +5,10 @@ use std::time::Instant;
 
 use searchfs::engine::SearchEngine;
 use searchfs::query::QueryMode;
-use searchfs::segment::{Manifest, SegmentStore, next_segment_id};
+use searchfs::segment::{
+    Manifest, SegmentReaderCache, SegmentStore, next_segment_id, search_reader_all,
+    search_reader_any, search_reader_phrase,
+};
 use searchfs::snapshot;
 
 fn main() -> io::Result<()> {
@@ -263,9 +266,6 @@ fn run_search_segments(
 ) -> io::Result<()> {
     let store = SegmentStore::new(index_dir);
 
-    let load_start = Instant::now();
-    let manifest = store.load_manifest()?;
-
     let mode = if query.starts_with('"') && query.ends_with('"') {
         QueryMode::Phrase
     } else {
@@ -273,17 +273,32 @@ fn run_search_segments(
             .map_err(|msg| io::Error::new(io::ErrorKind::InvalidInput, msg))?
     };
 
-    let query = query.trim_matches('"');
+    let terms: Vec<String> = searchfs::fileparser::tokenize(query)
+        .into_iter()
+        .map(|(term, _)| term)
+        .collect();
 
     let mut all_results = Vec::new();
 
-    for segment_id in manifest.segments {
-        let segment = store.load_segment(&segment_id)?;
-        let engine = SearchEngine::from_segment(segment);
-        all_results.extend(engine.search(query, mode));
+    let start = Instant::now();
+
+    let cache = SegmentReaderCache::open(&store)?;
+
+    for reader in cache.readers() {
+        match mode {
+            QueryMode::All => {
+                all_results.extend(search_reader_all(reader, &terms)?);
+            }
+            QueryMode::Any => {
+                all_results.extend(search_reader_any(reader, &terms)?);
+            }
+            QueryMode::Phrase => {
+                all_results.extend(search_reader_phrase(reader, &terms)?);
+            }
+        }
     }
 
-    let load_elapsed = load_start.elapsed();
+    let elapsed = start.elapsed();
 
     all_results.sort_by(|a, b| {
         b.score
@@ -291,7 +306,7 @@ fn run_search_segments(
             .then_with(|| a.path.cmp(&b.path))
     });
 
-    eprintln!("load_segments_time={:.2?}", load_elapsed);
+    eprintln!("fast_search_time={elapsed:.2?}");
 
     for result in all_results.into_iter().take(limit) {
         println!("{} score={}", result.path, result.score);
