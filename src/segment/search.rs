@@ -42,7 +42,7 @@ impl<'a> SegmentSearcher<'a> {
         let mut results = Vec::new();
 
         for (&doc_id, first_positions) in &first_postings {
-            let mut score = self.tf_idf(first_term, first_positions.len());
+            let mut score = self.bm25(first_term, first_positions.len());
             let mut matched = true;
 
             for (term, postings) in &other_postings {
@@ -51,7 +51,7 @@ impl<'a> SegmentSearcher<'a> {
                     break;
                 };
 
-                score += self.tf_idf(term, positions.len());
+                score += self.bm25(term, positions.len());
             }
 
             if !matched {
@@ -86,7 +86,7 @@ impl<'a> SegmentSearcher<'a> {
                     continue;
                 };
 
-                let score = self.tf_idf(term, positions.len());
+                let score = self.bm25(term, positions.len());
 
                 merged
                     .entry(doc_id)
@@ -163,23 +163,28 @@ impl<'a> SegmentSearcher<'a> {
         Ok(results)
     }
 
-    fn tf_idf(&self, term: &str, tf: usize) -> f64 {
-        let n = self.reader.doc_count() as f64;
-        let df = self.reader.document_frequency(term) as f64;
-
-        if n == 0.0 || df == 0.0 {
-            return 0.0;
-        }
-
-        tf as f64 * (n / df).ln()
-    }
-
     fn sort_results(&self, results: &mut [SearchResult]) {
         results.sort_by(|a, b| {
             b.score
                 .total_cmp(&a.score)
                 .then_with(|| a.path.cmp(&b.path))
         });
+    }
+
+    fn bm25(&self, term: &str, tf: usize) -> f64 {
+        let n = self.reader.doc_count() as f64;
+        let df = self.reader.document_frequency(term) as f64;
+
+        if n == 0.0 || df == 0.0 || tf == 0 {
+            return 0.0;
+        }
+
+        let k1 = 1.2;
+
+        let idf = ((n - df + 0.5) / (df + 0.5) + 1.0).ln();
+        let tf = tf as f64;
+
+        idf * ((tf * (k1 + 1.0)) / (tf + k1))
     }
 }
 
@@ -298,5 +303,47 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "a.txt");
         assert_eq!(results[0].score, 2.0);
+    }
+
+    #[test]
+    fn bm25_saturates_term_frequency() {
+        let dir = tempdir().unwrap();
+        let store = SegmentStore::new(dir.path());
+
+        let mut doctable = DocTable::new();
+
+        let doc1 = doctable.add_document("a.txt".to_string());
+        let doc2 = doctable.add_document("b.txt".to_string());
+
+        let mut index = InvertedIndex::new();
+
+        index.add_document_tokens(doc1, vec![("rust".to_string(), 0)]);
+
+        let mut tokens = Vec::new();
+
+        for pos in 0..100 {
+            tokens.push(("rust".to_string(), pos));
+        }
+
+        index.add_document_tokens(doc2, tokens);
+
+        let segment = Segment {
+            id: "seg_000001".to_string(),
+            doctable,
+            index,
+        };
+
+        store.save_segment(&segment).unwrap();
+
+        let reader = SegmentReader::open(&store, "seg_000001").unwrap();
+
+        let searcher = SegmentSearcher::new(&reader);
+
+        let score1 = searcher.bm25("rust", 1);
+        let score100 = searcher.bm25("rust", 100);
+
+        assert!(score100 > score1);
+
+        assert!(score100 < score1 * 20.0);
     }
 }
