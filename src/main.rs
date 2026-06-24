@@ -5,10 +5,10 @@ use std::time::Instant;
 
 use searchfs::engine::SearchEngine;
 use searchfs::query::QueryMode;
-use searchfs::segment::{
-    Manifest, SegmentReaderCache, SegmentStore, next_segment_id, search_reader_all,
-    search_reader_any, search_reader_phrase,
-};
+use searchfs::segment::format::{Manifest, next_segment_id};
+use searchfs::segment::reader::SegmentReaderCache;
+use searchfs::segment::search::SegmentSearcher;
+use searchfs::segment::store::SegmentStore;
 use searchfs::snapshot;
 
 fn main() -> io::Result<()> {
@@ -285,15 +285,16 @@ fn run_search_segments(
     let cache = SegmentReaderCache::open(&store)?;
 
     for reader in cache.readers() {
+        let searcher = SegmentSearcher::new(reader);
         match mode {
             QueryMode::All => {
-                all_results.extend(search_reader_all(reader, &terms)?);
+                all_results.extend(searcher.search_all(&terms)?);
             }
             QueryMode::Any => {
-                all_results.extend(search_reader_any(reader, &terms)?);
+                all_results.extend(searcher.search_any(&terms)?);
             }
             QueryMode::Phrase => {
-                all_results.extend(search_reader_phrase(reader, &terms)?);
+                all_results.extend(searcher.search_phrase(&terms)?);
             }
         }
     }

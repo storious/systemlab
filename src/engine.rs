@@ -6,7 +6,7 @@ use crate::fileparser;
 use crate::memindex::IndexStats;
 use crate::memindex::InvertedIndex;
 use crate::query::{QueryProcessor, SearchResult};
-use crate::segment::Segment;
+use crate::segment::format::Segment;
 use crate::snapshot::IndexSnapshot;
 
 pub struct SearchEngine {
