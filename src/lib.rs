@@ -1,4 +1,5 @@
 pub mod cleaner;
+pub mod cmd;
 pub mod doctable;
 pub mod engine;
 pub mod filecrawler;
