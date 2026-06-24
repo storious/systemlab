@@ -2,11 +2,11 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::time::Instant;
 
+use crate::cmd::utils::{print_results, search_with_cache};
 use crate::engine::SearchEngine;
 use crate::query::{QueryMode, parse_query_mode};
 use crate::segment::format::{Manifest, next_segment_id};
 use crate::segment::reader::SegmentReaderCache;
-use crate::segment::search::SegmentSearcher;
 use crate::segment::store::SegmentStore;
 use crate::snapshot;
 
@@ -124,45 +124,16 @@ pub(crate) fn run_search_segments(
 
     let (query, mode) = parse_query_mode(query, mode_arg);
 
-    let terms: Vec<String> = crate::index::parser::tokenize(query)
-        .into_iter()
-        .map(|(term, _)| term)
-        .collect();
-
-    let mut all_results = Vec::new();
-
     let start = Instant::now();
 
     let cache = SegmentReaderCache::open(&store)?;
 
-    for reader in cache.readers() {
-        let searcher = SegmentSearcher::new(reader);
-        match mode {
-            QueryMode::All => {
-                all_results.extend(searcher.search_all(&terms)?);
-            }
-            QueryMode::Any => {
-                all_results.extend(searcher.search_any(&terms)?);
-            }
-            QueryMode::Phrase => {
-                all_results.extend(searcher.search_phrase(&terms)?);
-            }
-        }
-    }
+    let results = search_with_cache(&cache, query, mode)?;
 
     let elapsed = start.elapsed();
 
-    all_results.sort_by(|a, b| {
-        b.score
-            .total_cmp(&a.score)
-            .then_with(|| a.path.cmp(&b.path))
-    });
-
     eprintln!("search_time={elapsed:.2?}");
-
-    for result in all_results.into_iter().take(limit) {
-        println!("{} score={}", result.path, result.score);
-    }
+    print_results(results, limit);
 
     Ok(())
 }
@@ -242,44 +213,13 @@ pub(crate) fn run_repl(index_dir: &str) -> io::Result<()> {
 
         let (query, mode) = parse_query_mode(query, QueryMode::All);
 
-        let terms: Vec<String> = crate::index::parser::tokenize(query)
-            .into_iter()
-            .map(|(term, _)| term)
-            .collect();
-
-        let mut all_results = Vec::new();
-
         let start = Instant::now();
-
-        for reader in cache.readers() {
-            let searcher = SegmentSearcher::new(reader);
-
-            match mode {
-                QueryMode::All => {
-                    all_results.extend(searcher.search_all(&terms)?);
-                }
-                QueryMode::Any => {
-                    all_results.extend(searcher.search_any(&terms)?);
-                }
-                QueryMode::Phrase => {
-                    all_results.extend(searcher.search_phrase(&terms)?);
-                }
-            }
-        }
+        let results = search_with_cache(&cache, query, mode)?;
 
         let elapsed = start.elapsed();
 
-        all_results.sort_by(|a, b| {
-            b.score
-                .total_cmp(&a.score)
-                .then_with(|| a.path.cmp(&b.path))
-        });
-
         eprintln!("search_time={elapsed:.2?}");
-
-        for result in all_results.into_iter().take(10) {
-            println!("{} score={}", result.path, result.score);
-        }
+        print_results(results, 10);
     }
 
     Ok(())
