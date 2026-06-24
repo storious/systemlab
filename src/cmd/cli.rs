@@ -48,6 +48,9 @@ pub enum Command {
         #[arg(value_enum, default_value_t = CliQueryMode::And)]
         mode: CliQueryMode,
     },
+
+    /// Merge all segments into one compacted segment.
+    MergeSegments { index_dir: String },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]

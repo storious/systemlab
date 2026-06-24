@@ -103,6 +103,17 @@ impl SearchEngine {
             index: segment.index,
         }
     }
+
+    pub fn merge_segment(&mut self, segment: Segment) {
+        let doc_id_offset = self.doctable.max_doc_id();
+
+        for (_doc_id, path) in segment.doctable.iter() {
+            self.doctable.add_document(path.to_string());
+        }
+
+        self.index
+            .merge_with_doc_id_offset(&segment.index, doc_id_offset);
+    }
 }
 
 impl Default for SearchEngine {

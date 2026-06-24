@@ -224,3 +224,15 @@ pub(crate) fn run_repl(index_dir: &str) -> io::Result<()> {
 
     Ok(())
 }
+
+pub(crate) fn run_merge_segments(index_dir: &str) -> io::Result<()> {
+    let store = SegmentStore::new(index_dir);
+
+    let start = Instant::now();
+    let merged_id = store.merge_all_segments()?;
+    let elapsed = start.elapsed();
+
+    eprintln!("merged segment={merged_id} merge_time={elapsed:.2?}");
+
+    Ok(())
+}

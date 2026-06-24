@@ -28,5 +28,6 @@ pub fn run() -> std::io::Result<()> {
             mode,
         } => commands::run_search_segments(&index_dir, &query, limit, mode.into()),
         Command::Repl { index_dir } => commands::run_repl(&index_dir),
+        Command::MergeSegments { index_dir } => commands::run_merge_segments(&index_dir),
     }
 }

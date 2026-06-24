@@ -80,6 +80,16 @@ impl InvertedIndex {
     pub fn insert_postings(&mut self, term: String, postings: HashMap<DocId, Vec<Position>>) {
         self.terms.insert(term, postings);
     }
+
+    pub fn merge_with_doc_id_offset(&mut self, other: &InvertedIndex, doc_id_offset: DocId) {
+        for (term, postings) in other.postings_iter() {
+            let target = self.terms.entry(term.clone()).or_default();
+
+            for (&doc_id, positions) in postings {
+                target.insert(doc_id + doc_id_offset, positions.clone());
+            }
+        }
+    }
 }
 
 #[cfg(test)]

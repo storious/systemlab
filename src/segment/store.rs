@@ -1,10 +1,11 @@
 use crate::segment::format::{
-    Manifest, Segment, SegmentDocs, SegmentTerms, TermEntry, TermPostings,
+    Manifest, Segment, SegmentDocs, SegmentTerms, TermEntry, TermPostings, next_segment_id,
 };
 use std::fs;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
+use crate::engine::SearchEngine;
 use crate::index::memindex::InvertedIndex;
 
 pub struct SegmentStore {
@@ -141,6 +142,41 @@ impl SegmentStore {
     pub(crate) fn manifest_path(&self) -> PathBuf {
         self.root.join("manifest.bin")
     }
+
+    pub fn merge_all_segments(&self) -> io::Result<String> {
+        let manifest = self.load_manifest()?;
+
+        if manifest.segments.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "cannot merge empty manifest",
+            ));
+        }
+
+        if manifest.segments.len() == 1 {
+            return Ok(manifest.segments[0].clone());
+        }
+
+        let mut merged = SearchEngine::new();
+
+        for segment_id in &manifest.segments {
+            let segment = self.load_segment(segment_id)?;
+            merged.merge_segment(segment);
+        }
+
+        let new_id = next_segment_id(&manifest);
+        let segment = merged.into_segment(new_id.clone());
+
+        self.save_segment(&segment)?;
+
+        let new_manifest = Manifest {
+            segments: vec![new_id.clone()],
+        };
+
+        self.save_manifest(&new_manifest)?;
+
+        Ok(new_id)
+    }
 }
 
 #[cfg(test)]
@@ -148,8 +184,11 @@ mod tests {
     use crate::index::doctable::DocTable;
     use crate::index::memindex::InvertedIndex;
     use crate::segment::format::{Manifest, Segment};
+    use crate::segment::reader::SegmentReaderCache;
+    use crate::segment::search::SegmentSearcher;
     use crate::segment::store::SegmentStore;
     use tempfile::tempdir;
+
     #[test]
     fn segment_store_saves_and_loads_manifest() {
         let dir = tempdir().unwrap();
@@ -193,5 +232,97 @@ mod tests {
         let results = engine.search("rust memory", QueryMode::All);
         assert_eq!(results.len(), 1);
         assert!(results[0].path.ends_with("a.txt"));
+    }
+
+    #[test]
+    fn merge_all_segments_compacts_manifest() {
+        let dir = tempdir().unwrap();
+        let store = SegmentStore::new(dir.path());
+
+        let segment1 = Segment {
+            id: "seg_000001".to_string(),
+            doctable: DocTable::new(),
+            index: InvertedIndex::new(),
+        };
+
+        let segment2 = Segment {
+            id: "seg_000002".to_string(),
+            doctable: DocTable::new(),
+            index: InvertedIndex::new(),
+        };
+
+        store.save_segment(&segment1).unwrap();
+        store.save_segment(&segment2).unwrap();
+
+        store
+            .save_manifest(&Manifest {
+                segments: vec!["seg_000001".to_string(), "seg_000002".to_string()],
+            })
+            .unwrap();
+
+        let merged_id = store.merge_all_segments().unwrap();
+
+        assert_eq!(merged_id, "seg_000003");
+
+        let manifest = store.load_manifest().unwrap();
+
+        assert_eq!(manifest.segments, vec!["seg_000003"]);
+    }
+
+    #[test]
+    fn merge_all_segments_preserves_search_results() {
+        let dir = tempdir().unwrap();
+        let store = SegmentStore::new(dir.path());
+
+        let mut doctable1 = DocTable::new();
+        let doc1 = doctable1.add_document("a.txt".to_string());
+
+        let mut index1 = InvertedIndex::new();
+        index1.add_document_tokens(
+            doc1,
+            vec![("rust".to_string(), 0), ("memory".to_string(), 1)],
+        );
+
+        let segment1 = Segment {
+            id: "seg_000001".to_string(),
+            doctable: doctable1,
+            index: index1,
+        };
+
+        let mut doctable2 = DocTable::new();
+        let doc2 = doctable2.add_document("b.txt".to_string());
+
+        let mut index2 = InvertedIndex::new();
+        index2.add_document_tokens(
+            doc2,
+            vec![("rust".to_string(), 0), ("system".to_string(), 1)],
+        );
+
+        let segment2 = Segment {
+            id: "seg_000002".to_string(),
+            doctable: doctable2,
+            index: index2,
+        };
+
+        store.save_segment(&segment1).unwrap();
+        store.save_segment(&segment2).unwrap();
+
+        store
+            .save_manifest(&Manifest {
+                segments: vec!["seg_000001".to_string(), "seg_000002".to_string()],
+            })
+            .unwrap();
+
+        store.merge_all_segments().unwrap();
+
+        let cache = SegmentReaderCache::open(&store).unwrap();
+        assert_eq!(cache.readers().len(), 1);
+
+        let searcher = SegmentSearcher::new(&cache.readers()[0]);
+        let results = searcher.search_any(&["rust".to_string()]).unwrap();
+
+        let paths: Vec<_> = results.iter().map(|r| r.path.as_str()).collect();
+
+        assert_eq!(paths, vec!["a.txt", "b.txt"]);
     }
 }

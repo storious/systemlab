@@ -48,6 +48,16 @@ impl DocTable {
     pub fn contains_path(&self, path: &str) -> bool {
         self.path_to_id.contains_key(path)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (DocId, &str)> {
+        self.id_to_path
+            .iter()
+            .map(|(&doc_id, path)| (doc_id, path.as_str()))
+    }
+
+    pub fn max_doc_id(&self) -> DocId {
+        self.id_to_path.keys().copied().max().unwrap_or(0)
+    }
 }
 
 impl Default for DocTable {
