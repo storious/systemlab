@@ -17,6 +17,14 @@ v0.3.0
 - Multi-segment Search
 - Segment Merge
 
+v0.3.2
+-------
+- Segment metadata
+- Document metadata
+- BM25 scoring
+- REPL commands
+- Segment cleanup after merge
+
 v0.4.0
 -------
 - BM25
