@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 use crate::query::QueryMode;
 use crate::query::{SearchResult, TopKCollector};
 use crate::segment::reader::{SegmentReader, SegmentReaderCache};
@@ -119,10 +121,16 @@ fn search_reader_cache(
     mode: QueryMode,
     limit: usize,
 ) -> io::Result<Vec<SearchResult>> {
+    let partial_results: Vec<io::Result<Vec<SearchResult>>> = cache
+        .readers()
+        .par_iter()
+        .map(|reader| search_segment(reader, terms, mode, limit))
+        .collect();
+
     let mut collector = TopKCollector::new(limit);
 
-    for reader in cache.readers() {
-        for result in search_segment(reader, terms, mode, limit)? {
+    for results in partial_results {
+        for result in results? {
             collector.collect(result);
         }
     }

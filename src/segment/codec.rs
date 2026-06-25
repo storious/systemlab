@@ -5,7 +5,7 @@ use crate::segment::format::TermPostings;
 use std::collections::HashMap;
 use std::io;
 
-pub trait PostingCodec {
+pub trait PostingCodec: Send + Sync {
     fn encode(&self, postings: &HashMap<DocId, Vec<Position>>) -> io::Result<Vec<u8>>;
 
     fn decode(&self, bytes: &[u8]) -> io::Result<HashMap<DocId, Vec<Position>>>;
