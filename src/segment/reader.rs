@@ -212,4 +212,45 @@ mod tests {
         assert_eq!(cache.readers().len(), 1);
         assert_eq!(cache.readers()[0].id(), "seg_000001");
     }
+
+    #[test]
+    fn segment_reader_loads_document_lengths() {
+        let dir = tempdir().unwrap();
+        let store = SegmentStore::new(dir.path());
+
+        let mut doctable = DocTable::new();
+        let doc1 = doctable.add_document("a.txt".to_string());
+        let doc2 = doctable.add_document("b.txt".to_string());
+
+        let mut index = InvertedIndex::new();
+
+        index.add_document_tokens(
+            doc1,
+            vec![
+                ("rust".to_string(), 0),
+                ("memory".to_string(), 1),
+                ("safety".to_string(), 2),
+            ],
+        );
+
+        index.add_document_tokens(
+            doc2,
+            vec![("rust".to_string(), 0), ("system".to_string(), 1)],
+        );
+
+        let segment = Segment {
+            id: "seg_000001".to_string(),
+            doctable,
+            index,
+        };
+
+        store.save_segment(&segment).unwrap();
+
+        let reader = SegmentReader::open(&store, "seg_000001").unwrap();
+
+        assert_eq!(reader.doc_len(doc1), 3);
+        assert_eq!(reader.doc_len(doc2), 2);
+        assert_eq!(reader.position_count(), 5);
+        assert_eq!(reader.avg_doc_len(), 2.5);
+    }
 }
