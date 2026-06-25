@@ -127,15 +127,10 @@ fn search_reader_cache(
         .map(|reader| search_segment(reader, terms, mode, limit))
         .collect();
 
-    let mut collector = TopKCollector::new(limit);
+    let partial_results: Vec<Vec<SearchResult>> =
+        partial_results.into_iter().collect::<io::Result<_>>()?;
 
-    for results in partial_results {
-        for result in results? {
-            collector.collect(result);
-        }
-    }
-
-    Ok(collector.into_sorted_vec())
+    Ok(merge_topk(partial_results, limit))
 }
 
 fn search_segment(
@@ -151,6 +146,16 @@ fn search_segment(
         QueryMode::Any => searcher.search_any(terms, limit),
         QueryMode::Phrase => searcher.search_phrase(terms, limit),
     }
+}
+
+fn merge_topk(partial_results: Vec<Vec<SearchResult>>, limit: usize) -> Vec<SearchResult> {
+    let mut collector = TopKCollector::new(limit);
+
+    for results in partial_results {
+        collector.extend(results);
+    }
+
+    collector.into_sorted_vec()
 }
 
 pub(crate) fn print_results(results: Vec<SearchResult>, limit: usize) {

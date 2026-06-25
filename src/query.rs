@@ -92,6 +92,15 @@ impl TopKCollector {
         }
     }
 
+    pub fn extend<I>(&mut self, results: I)
+    where
+        I: IntoIterator<Item = SearchResult>,
+    {
+        for result in results {
+            self.collect(result);
+        }
+    }
+
     pub fn collect(&mut self, result: SearchResult) {
         if self.limit == 0 {
             return;
