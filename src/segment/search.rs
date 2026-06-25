@@ -1,5 +1,5 @@
 use crate::index::doctable::DocId;
-use crate::query::SearchResult;
+use crate::query::{SearchResult, TopKCollector};
 use crate::segment::reader::SegmentReader;
 use crate::segment::scorer::Bm25Scorer;
 
@@ -17,6 +17,160 @@ impl<'a> SegmentSearcher<'a> {
             reader,
             scorer: Bm25Scorer::new(reader),
         }
+    }
+
+    pub fn search_all_topk(&self, terms: &[String], limit: usize) -> io::Result<Vec<SearchResult>> {
+        if terms.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut ordered_terms: Vec<&String> = terms.iter().collect();
+        ordered_terms.sort_by_key(|term| self.reader.term_df(term).unwrap_or(usize::MAX));
+
+        let first_term = ordered_terms[0];
+
+        let Some(first_postings) = self.reader.lookup(first_term)? else {
+            return Ok(Vec::new());
+        };
+
+        let mut other_postings = Vec::new();
+
+        for term in ordered_terms.iter().skip(1) {
+            let Some(postings) = self.reader.lookup(term)? else {
+                return Ok(Vec::new());
+            };
+
+            other_postings.push((*term, postings));
+        }
+
+        let mut collector = TopKCollector::new(limit);
+
+        for (&doc_id, first_positions) in &first_postings {
+            let mut score = self.scorer.score(first_term, doc_id, first_positions.len());
+            let mut matched = true;
+
+            for (term, postings) in &other_postings {
+                let Some(positions) = postings.get(&doc_id) else {
+                    matched = false;
+                    break;
+                };
+
+                score += self.scorer.score(term, doc_id, positions.len());
+            }
+
+            if !matched {
+                continue;
+            }
+
+            let Some(path) = self.reader.doc_path(doc_id) else {
+                continue;
+            };
+
+            collector.collect(SearchResult {
+                doc_id,
+                path: path.to_string(),
+                score,
+            });
+        }
+
+        Ok(collector.into_sorted_vec())
+    }
+
+    pub fn search_any_topk(&self, terms: &[String], limit: usize) -> io::Result<Vec<SearchResult>> {
+        let mut merged: HashMap<DocId, SearchResult> = HashMap::new();
+
+        for term in terms {
+            let Some(postings) = self.reader.lookup(term)? else {
+                continue;
+            };
+
+            for (&doc_id, positions) in &postings {
+                let Some(path) = self.reader.doc_path(doc_id) else {
+                    continue;
+                };
+
+                let score = self.scorer.score(term, doc_id, positions.len());
+
+                merged
+                    .entry(doc_id)
+                    .and_modify(|result| {
+                        result.score += score;
+                    })
+                    .or_insert_with(|| SearchResult {
+                        doc_id,
+                        path: path.to_string(),
+                        score,
+                    });
+            }
+        }
+
+        let mut collector = TopKCollector::new(limit);
+
+        for result in merged.into_values() {
+            collector.collect(result);
+        }
+
+        Ok(collector.into_sorted_vec())
+    }
+
+    pub fn search_phrase_topk(
+        &self,
+        terms: &[String],
+        limit: usize,
+    ) -> io::Result<Vec<SearchResult>> {
+        if terms.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut postings_by_term = Vec::new();
+
+        for term in terms {
+            let Some(postings) = self.reader.lookup(term)? else {
+                return Ok(Vec::new());
+            };
+
+            postings_by_term.push(postings);
+        }
+
+        let first_postings = &postings_by_term[0];
+        let mut collector = TopKCollector::new(limit);
+
+        for (&doc_id, first_positions) in first_postings {
+            let mut phrase_count = 0;
+
+            for &start_pos in first_positions {
+                let matched =
+                    postings_by_term
+                        .iter()
+                        .enumerate()
+                        .skip(1)
+                        .all(|(offset, postings)| {
+                            postings.get(&doc_id).is_some_and(|positions| {
+                                positions.contains(&(start_pos + offset as u64))
+                            })
+                        });
+
+                if matched {
+                    phrase_count += 1;
+                }
+            }
+
+            if phrase_count == 0 {
+                continue;
+            }
+
+            let Some(path) = self.reader.doc_path(doc_id) else {
+                continue;
+            };
+
+            collector.collect(SearchResult {
+                doc_id,
+                path: path.to_string(),
+                score: phrase_count as f64,
+            });
+        }
+
+        Ok(collector.into_sorted_vec())
     }
 
     pub fn search_all(&self, terms: &[String]) -> io::Result<Vec<SearchResult>> {
@@ -74,7 +228,6 @@ impl<'a> SegmentSearcher<'a> {
             });
         }
 
-        SearchResult::sort(&mut results);
         Ok(results)
     }
 
@@ -106,8 +259,7 @@ impl<'a> SegmentSearcher<'a> {
             }
         }
 
-        let mut results: Vec<_> = merged.into_values().collect();
-        SearchResult::sort(&mut results);
+        let results: Vec<_> = merged.into_values().collect();
         Ok(results)
     }
 
@@ -164,7 +316,6 @@ impl<'a> SegmentSearcher<'a> {
             });
         }
 
-        SearchResult::sort(&mut results);
         Ok(results)
     }
 }

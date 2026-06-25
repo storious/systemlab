@@ -1,7 +1,9 @@
 use crate::index::doctable::{DocId, DocTable};
 use crate::index::memindex::InvertedIndex;
 use crate::index::parser::tokenize;
-use std::collections::HashMap;
+
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 
 #[derive(Debug, PartialEq)]
 pub struct SearchResult {
@@ -47,6 +49,65 @@ impl TryFrom<&str> for QueryMode {
             "phrase" => Ok(QueryMode::Phrase),
             other => Err(format!("unknown query mode: {other}")),
         }
+    }
+}
+
+#[derive(Debug)]
+struct ScoredDoc(SearchResult);
+
+impl Eq for ScoredDoc {}
+
+impl PartialEq for ScoredDoc {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.score == other.0.score && self.0.path == other.0.path
+    }
+}
+
+impl Ord for ScoredDoc {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .0
+            .score
+            .total_cmp(&self.0.score)
+            .then_with(|| self.0.path.cmp(&other.0.path))
+    }
+}
+
+impl PartialOrd for ScoredDoc {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+pub struct TopKCollector {
+    limit: usize,
+    heap: BinaryHeap<ScoredDoc>,
+}
+
+impl TopKCollector {
+    pub fn new(limit: usize) -> Self {
+        Self {
+            limit,
+            heap: BinaryHeap::new(),
+        }
+    }
+
+    pub fn collect(&mut self, result: SearchResult) {
+        if self.limit == 0 {
+            return;
+        }
+
+        self.heap.push(ScoredDoc(result));
+
+        if self.heap.len() > self.limit {
+            self.heap.pop();
+        }
+    }
+
+    pub fn into_sorted_vec(self) -> Vec<SearchResult> {
+        let mut results: Vec<_> = self.heap.into_iter().map(|item| item.0).collect();
+        SearchResult::sort(&mut results);
+        results
     }
 }
 
@@ -358,5 +419,63 @@ mod tests {
         let results = qp.search("rust safety", QueryMode::Phrase);
 
         assert!(results.is_empty());
+    }
+
+    #[test]
+    fn topk_collector_keeps_highest_scoring_results() {
+        let mut collector = TopKCollector::new(2);
+
+        collector.collect(SearchResult {
+            doc_id: 1,
+            path: "a.txt".to_string(),
+            score: 1.0,
+        });
+
+        collector.collect(SearchResult {
+            doc_id: 2,
+            path: "b.txt".to_string(),
+            score: 3.0,
+        });
+
+        collector.collect(SearchResult {
+            doc_id: 3,
+            path: "c.txt".to_string(),
+            score: 2.0,
+        });
+
+        let results = collector.into_sorted_vec();
+
+        let paths: Vec<_> = results.iter().map(|r| r.path.as_str()).collect();
+
+        assert_eq!(paths, vec!["b.txt", "c.txt"]);
+    }
+
+    #[test]
+    fn topk_collector_breaks_ties_by_path() {
+        let mut collector = TopKCollector::new(2);
+
+        collector.collect(SearchResult {
+            doc_id: 1,
+            path: "b.txt".to_string(),
+            score: 1.0,
+        });
+
+        collector.collect(SearchResult {
+            doc_id: 2,
+            path: "a.txt".to_string(),
+            score: 1.0,
+        });
+
+        collector.collect(SearchResult {
+            doc_id: 3,
+            path: "c.txt".to_string(),
+            score: 1.0,
+        });
+
+        let results = collector.into_sorted_vec();
+
+        let paths: Vec<_> = results.iter().map(|r| r.path.as_str()).collect();
+
+        assert_eq!(paths, vec!["a.txt", "b.txt"]);
     }
 }

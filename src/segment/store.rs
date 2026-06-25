@@ -455,7 +455,8 @@ mod tests {
         let searcher = SegmentSearcher::new(&cache.readers()[0]);
         let results = searcher.search_any(&["rust".to_string()]).unwrap();
 
-        let paths: Vec<_> = results.iter().map(|r| r.path.as_str()).collect();
+        let mut paths: Vec<_> = results.iter().map(|r| r.path.as_str()).collect();
+        paths.sort();
 
         assert_eq!(paths, vec!["a.txt", "b.txt"]);
         assert!(!store.segment_dir("seg_000001").exists());

@@ -2,7 +2,9 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::time::Instant;
 
-use crate::cmd::utils::{print_repl_help, print_repl_stats, print_results, search_with_cache};
+use crate::cmd::utils::{
+    ReplCommandResult, ReplState, handle_repl_command, print_results, search_with_cache,
+};
 use crate::engine::SearchEngine;
 use crate::query::{QueryMode, parse_query_mode};
 use crate::segment::format::{MANIFEST_VERSION, Manifest, next_segment_id};
@@ -135,7 +137,7 @@ pub(crate) fn run_search_segments(
 
     let cache = SegmentReaderCache::open(&store)?;
 
-    let results = search_with_cache(&cache, query, mode)?;
+    let results = search_with_cache(&cache, query, mode, limit)?;
 
     let elapsed = start.elapsed();
 
@@ -191,90 +193,43 @@ pub(crate) fn run_repl(index_dir: &str) -> io::Result<()> {
         cache.readers().len(),
         load_elapsed,
     );
-
     eprintln!("type a query, or :quit to exit");
 
     let stdin = io::stdin();
     let mut line = String::new();
-    let mut limit = 10usize;
-    let mut mode = QueryMode::All;
+    let mut state = ReplState::default();
 
     loop {
         print!("searchfs> ");
         io::stdout().flush()?;
 
         line.clear();
-        let n = stdin.read_line(&mut line)?;
 
-        if n == 0 {
+        if stdin.read_line(&mut line)? == 0 {
             break;
         }
 
-        let query = line.trim().replace('：', ":");
-        let query = query.trim();
+        let normalized = line.trim().replace('：', ":");
+        let input = normalized.trim();
 
-        if query.is_empty() {
+        if input.is_empty() {
             continue;
         }
 
-        if query == ":quit" || query == ":q" {
-            break;
+        match handle_repl_command(input, &cache, &mut state) {
+            ReplCommandResult::Continue => continue,
+            ReplCommandResult::Exit => break,
+            ReplCommandResult::Search => {}
         }
 
-        if query == ":help" {
-            print_repl_help();
-            continue;
-        }
-
-        if query == ":stats" {
-            print_repl_stats(&cache, mode, limit);
-            continue;
-        }
-
-        if let Some(value) = query.strip_prefix(":limit ") {
-            match value.parse::<usize>() {
-                Ok(n) if n > 0 => {
-                    limit = n;
-                    eprintln!("limit={limit}");
-                }
-                _ => {
-                    eprintln!("invalid limit: {value}");
-                }
-            }
-
-            continue;
-        }
-
-        if let Some(value) = query.strip_prefix(":mode ") {
-            match value {
-                "and" => {
-                    mode = QueryMode::All;
-                    eprintln!("mode=and");
-                }
-                "or" => {
-                    mode = QueryMode::Any;
-                    eprintln!("mode=or");
-                }
-                "phrase" => {
-                    mode = QueryMode::Phrase;
-                    eprintln!("mode=phrase");
-                }
-                _ => {
-                    eprintln!("invalid mode: {value}");
-                }
-            }
-
-            continue;
-        }
-
-        let (query, query_mode) = parse_query_mode(query, mode);
+        let (query, query_mode) = parse_query_mode(input, state.mode);
 
         let start = Instant::now();
-        let results = search_with_cache(&cache, query, query_mode)?;
+        let results = search_with_cache(&cache, query, query_mode, state.limit)?;
         let elapsed = start.elapsed();
 
         eprintln!("search_time={elapsed:.2?}");
-        print_results(results, limit);
+        print_results(results, state.limit);
     }
 
     Ok(())
