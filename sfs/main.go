@@ -46,7 +46,7 @@ func main() {
 	go func() { log.Fatal(s3.Start()) }()
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		key := fmt.Sprintf("picture_%d.png", i)
 		data := bytes.NewReader([]byte("my big data file here!"))
 

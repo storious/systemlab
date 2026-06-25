@@ -26,7 +26,7 @@ func TestStore(t *testing.T) {
 	id := generateID()
 	defer teardown(t, s)
 
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		key := fmt.Sprintf("foo_%d", i)
 		data := []byte("some jpg bytes")
 
