@@ -6,12 +6,12 @@ build:
 	$(MAKE) -C searchfs build
 	$(MAKE) -C gdfs build
 
-fmt:
-	cd searchfs && cargo fmt --all
-	cd gdfs && gofmt -w .
+lint:
+	$(MAKE) -C searchfs lint
+	$(MAKE) -C gdfs lint
 
 searchfs-test:
-	cd searchfs && cargo test
+	$(MAKE) -C searchfs test
 
 gdfs-test:
 	$(MAKE) -C gdfs test

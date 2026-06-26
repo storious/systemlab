@@ -22,15 +22,15 @@ search:
 	@cargo run -- search $(INDEX) "rust" 10 and
 
 test:
-	@cargo fmt --all -- --check
 	@cargo test
-	@cargo clippy --all-targets --all-features -- -D warnings
 
 fmt:
 	@cargo fmt --all
 
-lint:
+clippy:
 	@cargo clippy --all-targets --all-features -- -D warnings
+
+lint: fmt clippy
 
 clean:
 	@rm -rf *.idx *.bin tmp* searchfs_index target

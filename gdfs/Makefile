@@ -28,7 +28,7 @@ fmt:
 vet:
 	@go vet ./...
 
-lint: fmt vet test
+lint: fmt vet
 
 clean:
 	@find . -type d -name "*_network" -exec rm -rf {} + 2>/dev/null || true
