@@ -1,213 +1,67 @@
-# SearchFS
+# SystemLab
 
-> A modular search engine written in Rust, built from first principles and
-> inspired by Lucene and Tantivy.
+> Learn search engines, distributed storage systems, and systems programming by building them from scratch.
 
-![CI](https://github.com/storious/searchfs/actions/workflows/ci.yaml/badge.svg)
+![CI](https://github.com/storious/systemlab/actions/workflows/ci.yaml/badge.svg)
 
-SearchFS is a learning project that incrementally implements the core building
-blocks of a modern search engine, including immutable segments, BM25 ranking,
-posting list compression, query planning, and parallel segment search.
+## Overview
 
----
+SystemLab is a monorepo containing a collection of independent but collaborative learning projects.
 
-## Features
+The goal is not to build production-ready software, but to understand how modern systems work through incremental implementation and experimentation.
 
-Current capabilities include:
+## Projects
 
-- In-memory inverted index
-- Snapshot persistence
-- Incremental indexing
-- Immutable segment architecture
-- Multi-segment search
-- Parallel segment search
-- Automatic segment merge scheduling
-- Segment merge / compaction
-- BM25 ranking
-- Posting list compression
-- Query planner
-- Top-K collector
-- Interactive search REPL
-- Segment inspection utilities
-- Pluggable storage backend
-- Pluggable posting codec
-- Memory-mapped local storage
----
+| Project | Language | Description |
+|---------|----------|-------------|
+| **SearchFS** | Rust | A toy search filesystem for learning inverted indexes, ranking, and search engine architecture. |
+| **GDFS** | Go | A toy distributed file system for learning metadata management, block storage, replication, and distributed systems. |
 
-## Build
-
-Build a snapshot index:
-
-```bash
-cargo run -- build docs searchfs.idx
-```
-
-Build an immutable segment index:
-
-```bash
-cargo run -- build-segment docs searchfs_index
-```
-
----
-
-## Search
-
-Search a snapshot index:
-
-```bash
-cargo run -- search searchfs.idx "white whale" 5 phrase
-cargo run -- search searchfs.idx "rust memory" 10 and
-cargo run -- search searchfs.idx "rust memory" 10 or
-```
-
-Search a segment index:
-
-```bash
-cargo run -- search-segments searchfs_index "white whale" 5
-cargo run -- search-segments searchfs_index "rust memory" 10 and
-cargo run -- search-segments searchfs_index "rust memory" 10 or
-```
-
----
-
-## Interactive REPL
-
-Start an interactive search session:
-
-```bash
-cargo run -- repl searchfs_index
-```
-
-Built-in commands:
+## Repository Structure
 
 ```text
-:q
-:help
-:stats
-
-:mode and
-:mode or
-:mode phrase
-
-:limit 20
+systemlab/
+├── docs/          # Architecture, ADRs and design notes
+├── searchfs/      # Rust search engine
+└── gdfs/          # Go distributed file system
 ```
 
----
+## Project Relationship
 
-## Segment Management
+The projects evolve independently.
 
-Append a new immutable segment:
-
-```bash
-cargo run -- update-segment searchfs_index new_docs
 ```
-
-Merge all segments:
-
-```bash
-cargo run -- merge-segments searchfs_index
-```
-
-Inspect segment metadata:
-
-```bash
-cargo run -- inspect-segments searchfs_index
-```
-
----
-
-## Development
-
-Run tests:
-
-```bash
-make test
-```
-
-Run Clippy:
-
-```bash
-cargo clippy -- -D warnings
-```
-
-Format source:
-
-```bash
-cargo fmt
-```
-
-Clean build artifacts:
-
-```bash
-make clean
-```
-
----
-
-## Architecture
-
-```text
-                     CLI / REPL
-
+          SearchFS
+              │
+      DocumentStore Interface
+              │
+   +----------+----------+
+   |                     |
+ LocalFS              Remote Storage
                          │
-
-                  Query Planner
-
-                         │
-
-                 Segment Searcher
-
-                         │
-
-               Segment Reader Cache
-
-                         │
-
-                  Segment Reader
-
-                         │
-
-                   Segment Store
-
-                  ┌──────┴──────┐
-
-               Storage        Codec
-
-          ┌────────────┐    ┌────────────────────┐
-
-      LocalStorage      PostingCodec
-
-      MemoryStorage     CompressedPostingCodec
+                +--------+--------+
+                |                 |
+              GDFS            S3 / OSS
 ```
 
----
+SearchFS depends only on an abstract storage interface.
 
-## Project Structure
+GDFS is one possible implementation of that interface, rather than a plugin tightly coupled to SearchFS.
 
-```text
-src/
+## Documentation
 
-├── cmd/          CLI and REPL
-├── index/        Tokenization and in-memory indexing
-├── query/        Query planner and collectors
-├── segment/      Immutable segment engine
-├── snapshot/     Snapshot persistence
-└── storage/      Storage abstraction
-```
+- `ROADMAP.md` — Overall learning roadmap
+- `docs/` — Architecture, ADRs, and design documents
+- `searchfs/README.md`
+- `gdfs/README.md`
 
----
+## Philosophy
 
-## Roadmap
+This repository emphasizes:
 
-See [ROADMAP.md](ROADMAP.md).
+- Learning by building
+- Simple, incremental design
+- Clean architecture
+- Well-documented design decisions
 
-
-## Release History
-
-| Version | Highlights |
-|---------|------------|
-| v0.1 | In-memory inverted index |
-| v0.2 | Snapshot persistence |
-| v0.3 | Immutable segment architecture |
-| v0.4 | Query engine and posting compression |
-| v0.5 | Storage abstraction, parallel search, merge scheduler |
+Each project should remain useful and understandable on its own while being able to collaborate with other projects through well-defined interfaces.

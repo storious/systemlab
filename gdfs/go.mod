@@ -1,4 +1,4 @@
-module sfs
+module gdfs
 
 go 1.26.4
 

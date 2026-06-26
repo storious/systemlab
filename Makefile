@@ -1,30 +1,21 @@
-.PHONY: all
+.PHONY: test build fmt clean searchfs-test gdfs-test
 
-INDEX := searchfs.idx
-DOCS  := docs
-
-all: test build
+test: searchfs-test gdfs-test
 
 build:
-	@cargo run -- build $(DOCS) $(INDEX)
-
-rebuild:
-	@rm -f $(INDEX)
-	@cargo run -- build $(DOCS) $(INDEX)
-
-search:
-	@cargo run -- search $(INDEX) "rust" 10 and
-
-test:
-	@cargo fmt --check
-	@cargo test
-	@cargo clippy --all-targets -- -D warnings
+	$(MAKE) -C searchfs build
+	$(MAKE) -C gdfs build
 
 fmt:
-	@cargo fmt
+	cd searchfs && cargo fmt --all
+	cd gdfs && gofmt -w .
 
-lint:
-	@cargo clippy --all-targets -- -D warnings
+searchfs-test:
+	cd searchfs && cargo test
+
+gdfs-test:
+	$(MAKE) -C gdfs test
 
 clean:
-	@rm -f *.idx *.bin
+	$(MAKE) -C searchfs clean
+	$(MAKE) -C gdfs clean

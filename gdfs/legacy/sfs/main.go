@@ -1,11 +1,14 @@
-package main
+//go:build legacy
+// +build legacy
+
+package sfs
 
 import (
 	"bytes"
 	"fmt"
+	"gdfs/legacy/sfs/p2p"
 	"io"
 	"log"
-	"sfs/p2p"
 	"time"
 )
 

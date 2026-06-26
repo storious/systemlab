@@ -1,13 +1,16 @@
-package main
+//go:build legacy
+// +build legacy
+
+package sfs
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"gdfs/legacy/sfs/p2p"
 	"io"
 	"log"
-	"sfs/p2p"
 	"sync"
 	"time"
 )
