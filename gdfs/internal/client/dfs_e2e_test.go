@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"gdfs/internal/datanode"
+	"gdfs/internal/namenode"
 
 	"github.com/stretchr/testify/require"
 )
@@ -81,8 +82,50 @@ func TestWriterReaderWithEmptyInput(t *testing.T) {
 	require.Equal(t, "", out.String())
 }
 
-// compile-time checks
-var (
-	_ BlockWriter = (*datanode.HTTPClient)(nil)
-	_ BlockReader = (*datanode.HTTPClient)(nil)
-)
+func TestSingleNodeDFSClientEndToEnd(t *testing.T) {
+	ctx := context.Background()
+
+	dnStore := datanode.NewLocalBlockStore(t.TempDir())
+	dn, err := datanode.NewDataNode("node-1", "127.0.0.1:0", dnStore)
+	require.NoError(t, err)
+
+	dnServer := httptest.NewServer(datanode.NewHTTPServer(dn))
+	defer dnServer.Close()
+
+	nn, err := namenode.NewNameNode(namenode.NewMetadataStore())
+	require.NoError(t, err)
+
+	nnServer := httptest.NewServer(namenode.NewHTTPServer(nn))
+	defer nnServer.Close()
+
+	blockClient := datanode.NewHTTPClient(dnServer.URL)
+	metadataClient := namenode.NewHTTPClient(nnServer.URL)
+
+	dfs, err := NewDFSClient(5, blockClient, metadataClient)
+	require.NoError(t, err)
+
+	input := "hello-world-from-gdfs"
+
+	meta, err := dfs.PutFile(ctx, "/docs/hello.txt", strings.NewReader(input))
+	require.NoError(t, err)
+	require.Equal(t, namenode.FilePath("/docs/hello.txt"), meta.Path)
+	require.Equal(t, int64(len(input)), meta.Size)
+	require.Len(t, meta.Blocks, 5)
+
+	stat, err := dfs.StatFile(ctx, "/docs/hello.txt")
+	require.NoError(t, err)
+	require.Equal(t, meta, stat)
+
+	var out bytes.Buffer
+
+	n, err := dfs.GetFile(ctx, "/docs/hello.txt", &out)
+	require.NoError(t, err)
+	require.Equal(t, int64(len(input)), n)
+	require.Equal(t, input, out.String())
+
+	err = dfs.DeleteFile(ctx, "/docs/hello.txt")
+	require.NoError(t, err)
+
+	_, err = dfs.StatFile(ctx, "/docs/hello.txt")
+	require.Error(t, err)
+}
