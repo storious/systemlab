@@ -2,7 +2,9 @@ package datanode
 
 import (
 	"context"
+	"errors"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -76,4 +78,28 @@ func TestLocalBlockStoreStat(t *testing.T) {
 	require.Equal(t, written.ID, stat.ID)
 	require.Equal(t, written.Size, stat.Size)
 	require.Equal(t, written.Checksum, stat.Checksum)
+}
+
+func TestLocalBlockStorePutDoesNotLeaveTempFile(t *testing.T) {
+	store := NewLocalBlockStore(t.TempDir())
+	ctx := context.Background()
+
+	id := BlockID("block-001")
+
+	_, err := store.Put(ctx, &Block{
+		ID:   id,
+		Data: strings.NewReader("hello"),
+	})
+	require.NoError(t, err)
+
+	_, err = os.Stat(store.blockPath(id) + ".tmp")
+	require.True(t, errors.Is(err, os.ErrNotExist))
+}
+
+func TestLocalBlockStoreDeleteMissingBlock(t *testing.T) {
+	store := NewLocalBlockStore(t.TempDir())
+	ctx := context.Background()
+
+	err := store.Delete(ctx, BlockID("missing-block"))
+	require.NoError(t, err)
 }
