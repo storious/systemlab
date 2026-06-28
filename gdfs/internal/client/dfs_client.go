@@ -13,7 +13,7 @@ type MetadataClient interface {
 	DeleteFile(ctx context.Context, path namenode.FilePath) error
 }
 
-type FileClient struct {
+type DFSClient struct {
 	writer   *Writer
 	reader   *Reader
 	metadata MetadataClient
@@ -24,7 +24,7 @@ type BlockClient interface {
 	BlockReader
 }
 
-func NewFileClient(blockSize int64, blocks BlockClient, metadata MetadataClient) (*FileClient, error) {
+func NewDFSClient(blockSize int64, blocks BlockClient, metadata MetadataClient) (*DFSClient, error) {
 	if blocks == nil {
 		return nil, ErrNilBlockClient
 	}
@@ -42,14 +42,14 @@ func NewFileClient(blockSize int64, blocks BlockClient, metadata MetadataClient)
 		return nil, err
 	}
 
-	return &FileClient{
+	return &DFSClient{
 		writer:   writer,
 		reader:   reader,
 		metadata: metadata,
 	}, nil
 }
 
-func (c *FileClient) PutFile(ctx context.Context, path namenode.FilePath, r io.Reader) (namenode.FileMetadata, error) {
+func (c *DFSClient) PutFile(ctx context.Context, path namenode.FilePath, r io.Reader) (namenode.FileMetadata, error) {
 	result, err := c.writer.Write(ctx, r)
 	if err != nil {
 		return namenode.FileMetadata{}, err
@@ -64,7 +64,7 @@ func (c *FileClient) PutFile(ctx context.Context, path namenode.FilePath, r io.R
 	return c.metadata.PutFile(ctx, meta)
 }
 
-func (c *FileClient) GetFile(ctx context.Context, path namenode.FilePath, dst io.Writer) (int64, error) {
+func (c *DFSClient) GetFile(ctx context.Context, path namenode.FilePath, dst io.Writer) (int64, error) {
 	meta, err := c.metadata.GetFile(ctx, path)
 	if err != nil {
 		return 0, err
@@ -73,10 +73,10 @@ func (c *FileClient) GetFile(ctx context.Context, path namenode.FilePath, dst io
 	return c.reader.Read(ctx, meta.Blocks, dst)
 }
 
-func (c *FileClient) StatFile(ctx context.Context, path namenode.FilePath) (namenode.FileMetadata, error) {
+func (c *DFSClient) StatFile(ctx context.Context, path namenode.FilePath) (namenode.FileMetadata, error) {
 	return c.metadata.GetFile(ctx, path)
 }
 
-func (c *FileClient) DeleteFile(ctx context.Context, path namenode.FilePath) error {
+func (c *DFSClient) DeleteFile(ctx context.Context, path namenode.FilePath) error {
 	return c.metadata.DeleteFile(ctx, path)
 }

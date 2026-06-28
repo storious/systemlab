@@ -28,7 +28,7 @@ func main() {
 	blockClient := datanode.NewHTTPClient(*datanodeAddr)
 	metaClient := namenode.NewHTTPClient(*namenodeAddr)
 
-	fs, err := client.NewFileClient(*blockSize, blockClient, metaClient)
+	fs, err := client.NewDFSClient(*blockSize, blockClient, metaClient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func main() {
 	}
 }
 
-func put(ctx context.Context, fs *client.FileClient, localPath, remotePath string) {
+func put(ctx context.Context, fs *client.DFSClient, localPath, remotePath string) {
 	f, err := os.Open(localPath)
 	if err != nil {
 		log.Fatal(err)
@@ -81,7 +81,7 @@ func put(ctx context.Context, fs *client.FileClient, localPath, remotePath strin
 	fmt.Printf("stored %s size=%d blocks=%d\n", meta.Path, meta.Size, len(meta.Blocks))
 }
 
-func get(ctx context.Context, fs *client.FileClient, remotePath, localPath string) {
+func get(ctx context.Context, fs *client.DFSClient, remotePath, localPath string) {
 	f, err := os.Create(localPath)
 	if err != nil {
 		log.Fatal(err)
@@ -96,7 +96,7 @@ func get(ctx context.Context, fs *client.FileClient, remotePath, localPath strin
 	fmt.Printf("retrieved %s size=%d\n", remotePath, n)
 }
 
-func stat(ctx context.Context, fs *client.FileClient, remotePath string) {
+func stat(ctx context.Context, fs *client.DFSClient, remotePath string) {
 	meta, err := fs.StatFile(ctx, namenode.FilePath(remotePath))
 	if err != nil {
 		log.Fatal(err)
@@ -111,7 +111,7 @@ func stat(ctx context.Context, fs *client.FileClient, remotePath string) {
 	}
 }
 
-func del(ctx context.Context, fs *client.FileClient, remotePath string) {
+func del(ctx context.Context, fs *client.DFSClient, remotePath string) {
 	if err := fs.DeleteFile(ctx, namenode.FilePath(remotePath)); err != nil {
 		log.Fatal(err)
 	}

@@ -32,7 +32,7 @@ func TestFileClientPutGetStatDeleteFile(t *testing.T) {
 	blockClient := datanode.NewHTTPClient(dnServer.URL)
 	metadataClient := namenode.NewHTTPClient(nnServer.URL)
 
-	fileClient, err := NewFileClient(5, blockClient, metadataClient)
+	fileClient, err := NewDFSClient(5, blockClient, metadataClient)
 	require.NoError(t, err)
 
 	meta, err := fileClient.PutFile(ctx, "/docs/hello.txt", strings.NewReader("hello-world"))
