@@ -1,14 +1,18 @@
 # Roadmap
 
-SystemLab is a long-term learning project focused on understanding modern systems by building them from scratch.
+SystemLab is a long-term systems programming learning project.
 
-Rather than pursuing production-ready software, the repository emphasizes architectural understanding, incremental implementation, and engineering practice.
+The goal is to understand how modern systems work by building small, focused implementations from scratch.
 
-## Learning Directions
+Rather than pursuing production-ready software, SystemLab emphasizes architectural understanding, incremental implementation, and engineering practice.
 
-### Search Systems
+---
 
-Build a search engine from first principles.
+# Learning Domains
+
+## Search Systems
+
+Understand how search engines work.
 
 Topics include:
 
@@ -21,86 +25,154 @@ Topics include:
 
 Current project:
 
-- SearchFS
+- **SearchFS** (Rust)
 
 ---
 
-### Storage Systems
+## Storage Systems
 
-Build storage systems from local storage to distributed storage.
+Understand how data is stored locally and across machines.
 
 Topics include:
 
-- Local storage engines
+- Storage engines
 - Block storage
 - Distributed file systems
 - Object storage
-- Replication
 - Metadata management
+- Replication
 - Fault tolerance
 
 Current project:
 
-- GDFS
+- **GDFS** (Go)
 
 ---
 
-### Distributed Systems
+## Cache Systems
 
-Understand how distributed systems coordinate and scale.
+Understand high-performance in-memory storage.
+
+Topics include:
+
+- Hash tables
+- Memory allocators
+- TTL
+- Cache eviction
+- Persistence (WAL / Snapshot)
+- Networking
+
+Current project:
+
+- **ZigKV** (Zig)
+
+---
+
+## Distributed Systems
+
+Understand how multiple machines coordinate.
 
 Topics include:
 
 - RPC
 - Service discovery
 - Heartbeats
-- Consensus
 - Replication
+- Consensus
 - Scheduling
+
+Future projects may emerge naturally from SearchFS and GDFS.
 
 ---
 
-### Systems Programming
+## Systems Programming
 
-Learn low-level system implementation through practical projects.
+Build software close to the operating system.
 
 Topics include:
 
 - Memory management
-- Concurrency
 - Networking
+- Concurrency
 - Serialization
 - Storage engines
 - Performance optimization
 
+This domain spans every project in SystemLab.
+
 ---
 
-## Project Philosophy
+# Repository Vision
 
-Each project in this repository should satisfy the following principles:
+```text
+                    SystemLab
+                         │
+      ┌──────────────────┼──────────────────┐
+      │                  │                  │
+  Search Systems     Storage Systems    Cache Systems
+      │                  │                  │
+  SearchFS            GDFS             ZigKV
+     (Rust)            (Go)             (Zig)
+```
+
+Projects evolve independently.
+
+When appropriate, they may collaborate through well-defined interfaces.
+
+For example:
+
+```text
+           SearchFS
+               │
+      DocumentStore Interface
+               │
+    +----------+----------+
+    |                     |
+ LocalFS              Remote Storage
+                         │
+                        GDFS
+
+           SearchFS
+               │
+       Document Cache
+               │
+             ZigKV
+```
+
+These integrations are optional rather than required.
+
+---
+
+# Design Principles
+
+Every project should be:
 
 - Learn by building
-- Keep implementations understandable
-- Evolve incrementally
-- Document important design decisions
-- Prefer clear architecture over unnecessary complexity
+- Incremental
+- Easy to understand
+- Independently usable
+- Well documented
+- Cleanly architected
 
-Projects should remain independently useful while being able to collaborate through well-defined interfaces.
+Complexity should be introduced only when it improves understanding.
 
 ---
 
-## Repository Vision
+# Long-term Roadmap
 
-```
-                SystemLab
-                     │
-     ┌───────────────┴───────────────┐
-     │                               │
- Search Systems                Storage Systems
-     │                               │
- SearchFS                       GDFS
-     │                               │
-     └────────── DocumentStore ──────┘
-```
+The repository will continue to grow by adding focused learning projects.
 
-Future projects may be added as the repository grows, while preserving the independence of each project.
+Current roadmap:
+
+- ✅ SearchFS — Search engine fundamentals
+- ✅ GDFS — Distributed storage fundamentals
+- ✅ ZigKV — In-memory cache fundamentals
+
+Potential future projects:
+
+- TinyMQ — Message queue
+- ToyDB — Storage engine / database
+- TinyScheduler — Distributed scheduling
+- TinyRPC — RPC framework
+
+Each project explores one core systems topic while remaining small enough to understand from source code.
