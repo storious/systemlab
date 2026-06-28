@@ -1,42 +1,97 @@
 # GDFS
 
-> A toy distributed file system written in Go.
+> A minimal distributed file system written in Go for learning distributed systems.
 
 ## Overview
 
-GDFS is a learning project that explores the core ideas behind distributed file systems.
+GDFS is a learning-oriented distributed file system inspired by systems such as GFS and HDFS.
 
-Rather than pursuing production performance, the project focuses on understanding the architecture and implementation of systems such as HDFS, GFS, and modern object storage systems.
+It is designed to be small enough to understand, but complete enough to be genuinely useful for personal experiments and small internal deployments.
 
-## Goals
+## Quick Start
 
-- Understand distributed file system architecture
-- Implement block-based storage
-- Learn metadata management
-- Implement replication and recovery
-- Explore distributed system fundamentals
+Build binaries:
+
+```bash
+make build
+```
+
+Start the NameNode:
+
+```bash
+./bin/namenode -addr :9000
+```
+
+Start the DataNode:
+
+```bash
+./bin/datanode -id node-1 -addr :9001 -root ./data/node-1
+```
+
+Upload a file:
+
+```bash
+./bin/gdfs put README.md /docs/readme.md
+```
+
+Inspect metadata:
+
+```bash
+./bin/gdfs stat /docs/readme.md
+```
+
+Download the file:
+
+```bash
+./bin/gdfs get /docs/readme.md out.md
+```
+
+Delete the file:
+
+```bash
+./bin/gdfs delete /docs/readme.md
+```
+
+## Features
+
+Current capabilities:
+
+- Local block storage
+- DataNode block service
+- NameNode metadata service
+- HTTP-based APIs
+- DFS client coordinator
+- File upload and download
+- End-to-end single-node integration tests
+
+Planned capabilities:
+
+- Replication
+- Heartbeats
+- Failure detection
+- Metadata persistence
+- Recovery
+- Rebalancing
+- Object storage interface
 
 ## Architecture
 
 ```text
-                 +-------------+
-                 |   Client    |
-                 +------+------+
-                        |
-                 Metadata Request
-                        |
-                 +------+------+
-                 |  NameNode   |
-                 +------+------+
-                        |
-              Block Placement Metadata
-                        |
-        +---------------+---------------+
-        |                               |
- +------+-------+               +-------+------+
- | DataNode #1  |               | DataNode #2  |
- | Block Store  |               | Block Store  |
- +--------------+               +--------------+
+              +-------------+
+              |  GDFS CLI   |
+              +------+------+ 
+                     |
+              +------v------+
+              | DFS Client  |
+              +---+-----+---+
+                  |     |
+          Metadata|     |Blocks
+                  |     |
+          +-------v-+ +-v--------+
+          |NameNode | |DataNode  |
+          +----+----+ +----+-----+
+               |           |
+     In-memory Metadata  LocalBlockStore
 ```
 
 ## Repository Layout
@@ -48,46 +103,42 @@ gdfs/
 │   ├── namenode/
 │   └── datanode/
 │
-├── internal/
-│   ├── client/
-│   ├── datanode/
-│   ├── namenode/
-│   ├── protocol/
-│   └── storage/
-│
-└── legacy/
+└── internal/
+    ├── client/
+    ├── datanode/
+    ├── namenode/
+    ├── protocol/
+    └── storage/
 ```
 
-## Development Roadmap
+## Current Implementation
 
-### Phase 1
+GDFS v0.1 supports:
 
-- Local Block Store
-- DataNode
-- NameNode
-- Client
-- File Upload / Download
+- Single NameNode
+- Single DataNode
+- In-memory metadata
+- Local block storage
+- HTTP communication
+- File upload and download through CLI
 
-### Phase 2
+Current limitations:
 
-- Block Replication
-- Heartbeat
-- Failure Detection
-- Metadata Persistence
+- No replication
+- No fault tolerance
+- No persistent metadata
+- No block placement policy
+- No authentication or access control
 
-### Phase 3
+## Roadmap
 
-- Rebalancing
-- Snapshot
-- Object Storage Interface
-
-See `ROADMAP.md` for the complete roadmap.
+See [ROADMAP.md](ROADMAP.md).
 
 ## Relationship with SearchFS
 
 GDFS is **not** a storage plugin for SearchFS.
 
-Instead, both projects evolve independently and communicate through a storage abstraction.
+SearchFS and GDFS evolve independently and communicate through a storage abstraction.
 
 ```text
 SearchFS
@@ -101,8 +152,8 @@ LocalFS       GDFS      S3 / OSS
 
 This design keeps SearchFS independent of any particular storage implementation while allowing GDFS to serve as one possible backend.
 
-## Status
+## Project Philosophy
 
-🚧 This project is under active development.
+GDFS is intentionally designed to remain small, understandable, and useful.
 
-The architecture may change as new concepts are explored and implemented.
+Rather than competing with production distributed file systems, it focuses on implementing the core ideas behind systems such as GFS and HDFS while remaining suitable for learning, experimentation, and small-scale use
