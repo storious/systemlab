@@ -10,6 +10,12 @@ lint:
 	$(MAKE) -C searchfs lint
 	$(MAKE) -C gdfs lint
 
+searchfs-build:
+	$(MAKE) -C searchfs build
+
+gdfs-build:
+	$(MAKE) -C gdfs build
+
 searchfs-test:
 	$(MAKE) -C searchfs test
 
