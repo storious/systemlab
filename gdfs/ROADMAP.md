@@ -100,12 +100,12 @@ A lightweight object storage service built on the GDFS storage layer.
 
 ## Integration
 
-GDFS is designed to evolve independently from SearchFS.
+GDFS is designed to evolve independently from SearchRS.
 
 Rather than serving as a storage plugin, GDFS provides one possible implementation of a generic storage interface.
 
 ```text
-SearchFS
+SearchRS
       │
 DocumentStore Interface
       │

@@ -134,14 +134,14 @@ Current limitations:
 
 See [ROADMAP.md](ROADMAP.md).
 
-## Relationship with SearchFS
+## Relationship with SearchRS
 
-GDFS is **not** a storage plugin for SearchFS.
+GDFS is **not** a storage plugin for SearchRS.
 
-SearchFS and GDFS evolve independently and communicate through a storage abstraction.
+SearchRS and GDFS evolve independently and communicate through a storage abstraction.
 
 ```text
-SearchFS
+SearchRS
      │
 DocumentStore Interface
      │
@@ -150,7 +150,7 @@ DocumentStore Interface
 LocalFS       GDFS      S3 / OSS
 ```
 
-This design keeps SearchFS independent of any particular storage implementation while allowing GDFS to serve as one possible backend.
+This design keeps SearchRS independent of any particular storage implementation while allowing GDFS to serve as one possible backend.
 
 ## Project Philosophy
 

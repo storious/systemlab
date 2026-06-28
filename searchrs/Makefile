@@ -1,6 +1,6 @@
 .PHONY: all build index rebuild search test fmt lint clean
 
-INDEX := searchfs.idx
+INDEX := searchrs.idx
 DOCS  := testdata
 
 all: test build
@@ -33,4 +33,4 @@ clippy:
 lint: fmt clippy
 
 clean:
-	@rm -rf *.idx *.bin tmp* searchfs_index target
+	@rm -rf *.idx *.bin tmp* searchrs_index target

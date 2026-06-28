@@ -1,7 +1,7 @@
 .PHONY: \
 	all check \
 	build test fmt lint clean \
-	searchfs-build searchfs-test searchfs-fmt searchfs-lint \
+	searchrs-build searchrs-test searchrs-fmt searchrs-lint \
 	gdfs-build gdfs-test gdfs-fmt gdfs-lint \
 	zigkv-build zigkv-test zigkv-fmt zigkv-lint
 
@@ -13,34 +13,34 @@ check: fmt lint test
 # All projects
 #
 
-build: searchfs-build gdfs-build zigkv-build
+build: searchrs-build gdfs-build zigkv-build
 
-test: searchfs-test gdfs-test zigkv-test
+test: searchrs-test gdfs-test zigkv-test
 
-fmt: searchfs-fmt gdfs-fmt zigkv-fmt
+fmt: searchrs-fmt gdfs-fmt zigkv-fmt
 
-lint: searchfs-lint gdfs-lint zigkv-lint
+lint: searchrs-lint gdfs-lint zigkv-lint
 
 clean:
-	$(MAKE) -C searchfs clean
+	$(MAKE) -C searchrs clean
 	$(MAKE) -C gdfs clean
 	$(MAKE) -C zigkv clean
 
 #
-# SearchFS
+# searchrs
 #
 
-searchfs-build:
-	$(MAKE) -C searchfs build
+searchrs-build:
+	$(MAKE) -C searchrs build
 
-searchfs-test:
-	$(MAKE) -C searchfs test
+searchrs-test:
+	$(MAKE) -C searchrs test
 
-searchfs-fmt:
-	$(MAKE) -C searchfs fmt
+searchrs-fmt:
+	$(MAKE) -C searchrs fmt
 
-searchfs-lint:
-	$(MAKE) -C searchfs lint
+searchrs-lint:
+	$(MAKE) -C searchrs lint
 
 #
 # GDFS

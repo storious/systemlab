@@ -280,7 +280,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "searchfs"
+name = "searchrs"
 version = "0.1.0"
 dependencies = [
  "bincode",

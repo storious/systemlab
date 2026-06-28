@@ -12,4 +12,4 @@ v0.6  mmap log segment
 
 v0.7  replication toy model
 
-v0.8  SearchFS / GDFS integration
+v0.8  SearchRS / GDFS integration

@@ -9,13 +9,13 @@ permissions:
   contents: read
 
 jobs:
-  searchfs:
-    name: SearchFS / Rust
+  searchrs:
+    name: SearchRS / Rust
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: searchfs
+        working-directory: searchrs
 
     steps:
       - name: Checkout

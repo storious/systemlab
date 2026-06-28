@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[command(name = "searchfs")]
+#[command(name = "searchrs")]
 #[command(version, about = "A toy search engine written in Rust")]
 pub struct Cli {
     #[command(subcommand)]

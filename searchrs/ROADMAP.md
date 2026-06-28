@@ -1,6 +1,6 @@
-# SearchFS Roadmap
+# SearchRS Roadmap
 
-SearchFS is a learning project that incrementally implements the core building blocks of a modern search engine.
+SearchRS is a learning project that incrementally implements the core building blocks of a modern search engine.
 
 ---
 

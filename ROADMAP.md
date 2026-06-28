@@ -25,7 +25,7 @@ Topics include:
 
 Current project:
 
-- **SearchFS** (Rust)
+- **SearchRS** (Rust)
 
 ---
 
@@ -81,7 +81,7 @@ Topics include:
 - Consensus
 - Scheduling
 
-Future projects may emerge naturally from SearchFS and GDFS.
+Future projects may emerge naturally from SearchRS and GDFS.
 
 ---
 
@@ -111,7 +111,7 @@ This domain spans every project in SystemLab.
       │                  │                  │
   Search Systems     Storage Systems    Cache Systems
       │                  │                  │
-  SearchFS            GDFS             ZigKV
+  SearchRS            GDFS             ZigKV
      (Rust)            (Go)             (Zig)
 ```
 
@@ -122,7 +122,7 @@ When appropriate, they may collaborate through well-defined interfaces.
 For example:
 
 ```text
-           SearchFS
+           SearchRS
                │
       DocumentStore Interface
                │
@@ -132,7 +132,7 @@ For example:
                          │
                         GDFS
 
-           SearchFS
+           SearchRS
                │
        Document Cache
                │
@@ -164,7 +164,7 @@ The repository will continue to grow by adding focused learning projects.
 
 Current roadmap:
 
-- ✅ SearchFS — Search engine fundamentals
+- ✅ SearchRS — Search engine fundamentals
 - ✅ GDFS — Distributed storage fundamentals
 - ✅ ZigKV — In-memory cache fundamentals
 

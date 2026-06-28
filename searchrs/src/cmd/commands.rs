@@ -218,7 +218,7 @@ pub(crate) fn run_repl(index_dir: &str) -> io::Result<()> {
     let mut state = ReplState::default();
 
     loop {
-        print!("searchfs> ");
+        print!("searchrs> ");
         io::stdout().flush()?;
 
         line.clear();

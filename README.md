@@ -21,7 +21,7 @@ The goal is **not** to build production-ready software, but to understand how re
 
 | Project | Language | Focus |
 |---------|----------|-------|
-| **SearchFS** | Rust | Search engine, inverted index, ranking, query processing |
+| **SearchRS** | Rust | Search engine, inverted index, ranking, query processing |
 | **GDFS** | Go | Distributed file system, metadata management, replication |
 | **ZigKV** | Zig | In-memory key-value cache, memory management, TTL |
 
@@ -33,7 +33,7 @@ systemlab/
 │   ├── architecture/
 │   ├── adr/
 │   └── ...
-├── searchfs/
+├── searchrs/
 ├── gdfs/
 ├── zigkv/
 ├── Makefile
@@ -63,7 +63,7 @@ Projects evolve independently and may collaborate when appropriate.
                     │
     ┌───────────────┼────────────────┐
     │               │                │
- SearchFS         GDFS            ZigKV
+ SearchRS         GDFS            ZigKV
   (Rust)          (Go)            (Zig)
     │               │                │
  Search         Storage          Cache
@@ -72,7 +72,7 @@ Projects evolve independently and may collaborate when appropriate.
 One possible integration looks like:
 
 ```text
-          SearchFS
+          SearchRS
               │
      DocumentStore Interface
               │
@@ -82,7 +82,7 @@ One possible integration looks like:
                         │
                        GDFS
 
-          SearchFS
+          SearchRS
               │
       Document Cache
               │
@@ -95,7 +95,7 @@ These integrations are optional rather than required. The projects remain indepe
 
 - `ROADMAP.md` — Overall learning roadmap
 - `docs/` — Architecture, ADRs, and design notes
-- `searchfs/README.md`
+- `searchrs/README.md`
 - `gdfs/README.md`
 - `zigkv/README.md`
 

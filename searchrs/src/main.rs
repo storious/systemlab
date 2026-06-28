@@ -1,5 +1,5 @@
 use std::io;
 
 fn main() -> io::Result<()> {
-    searchfs::cmd::run()
+    searchrs::cmd::run()
 }

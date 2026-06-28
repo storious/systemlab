@@ -1,10 +1,10 @@
-# SearchFS
+# SearchRS
 
 > A modular search engine written in Rust, built from first principles and
 > inspired by Lucene and Tantivy.
 
 
-SearchFS is a learning project that incrementally implements the core building
+SearchRS is a learning project that incrementally implements the core building
 blocks of a modern search engine, including immutable segments, BM25 ranking,
 posting list compression, query planning, and parallel segment search.
 
@@ -38,13 +38,13 @@ Current capabilities include:
 Build a snapshot index:
 
 ```bash
-cargo run -- build docs searchfs.idx
+cargo run -- build docs searchrs.idx
 ```
 
 Build an immutable segment index:
 
 ```bash
-cargo run -- build-segment docs searchfs_index
+cargo run -- build-segment docs searchrs_index
 ```
 
 ---
@@ -54,17 +54,17 @@ cargo run -- build-segment docs searchfs_index
 Search a snapshot index:
 
 ```bash
-cargo run -- search searchfs.idx "white whale" 5 phrase
-cargo run -- search searchfs.idx "rust memory" 10 and
-cargo run -- search searchfs.idx "rust memory" 10 or
+cargo run -- search searchrs.idx "white whale" 5 phrase
+cargo run -- search searchrs.idx "rust memory" 10 and
+cargo run -- search searchrs.idx "rust memory" 10 or
 ```
 
 Search a segment index:
 
 ```bash
-cargo run -- search-segments searchfs_index "white whale" 5
-cargo run -- search-segments searchfs_index "rust memory" 10 and
-cargo run -- search-segments searchfs_index "rust memory" 10 or
+cargo run -- search-segments searchrs_index "white whale" 5
+cargo run -- search-segments searchrs_index "rust memory" 10 and
+cargo run -- search-segments searchrs_index "rust memory" 10 or
 ```
 
 ---
@@ -74,7 +74,7 @@ cargo run -- search-segments searchfs_index "rust memory" 10 or
 Start an interactive search session:
 
 ```bash
-cargo run -- repl searchfs_index
+cargo run -- repl searchrs_index
 ```
 
 Built-in commands:
@@ -98,19 +98,19 @@ Built-in commands:
 Append a new immutable segment:
 
 ```bash
-cargo run -- update-segment searchfs_index new_docs
+cargo run -- update-segment searchrs_index new_docs
 ```
 
 Merge all segments:
 
 ```bash
-cargo run -- merge-segments searchfs_index
+cargo run -- merge-segments searchrs_index
 ```
 
 Inspect segment metadata:
 
 ```bash
-cargo run -- inspect-segments searchfs_index
+cargo run -- inspect-segments searchrs_index
 ```
 
 ---

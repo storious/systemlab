@@ -20,13 +20,13 @@
 **/zig-out/
 
 # ============================================================
-# SearchFS
+# SearchRS
 # ============================================================
 
-searchfs/searchfs.idx
-searchfs/searchfs_index/
-searchfs/*.idx
-searchfs/*.bin
+searchrs/searchrs.idx
+searchrs/searchrs_index/
+searchrs/*.idx
+searchrs/*.bin
 
 
 # ============================================================

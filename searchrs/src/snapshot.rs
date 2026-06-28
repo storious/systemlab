@@ -61,7 +61,7 @@ mod tests {
         let mut engine = SearchEngine::new();
         engine.index_dir(dir.path()).unwrap();
 
-        let snapshot_path = dir.path().join("searchfs.idx");
+        let snapshot_path = dir.path().join("searchrs.idx");
 
         let snapshot = engine.into_snapshot();
         save(&snapshot_path, &snapshot).unwrap();
