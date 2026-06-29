@@ -59,10 +59,17 @@ Current capabilities:
 - Local block storage
 - DataNode block service
 - NameNode metadata service
+- DataNode registry
+- Periodic heartbeat
+- Node health tracking
+- Least-used block placement
+- Replica-aware metadata
+- Replica-aware reads
+- Storage usage reporting
 - HTTP-based APIs
 - DFS client coordinator
 - File upload and download
-- End-to-end single-node integration tests
+- End-to-end integration tests
 
 Planned capabilities:
 
@@ -122,12 +129,14 @@ GDFS v0.1 supports:
 - HTTP communication
 - File upload and download through CLI
 
+
 Current limitations:
 
-- No replication
-- No fault tolerance
+- Single NameNode
+- In-memory metadata
+- No recovery or re-replication
 - No persistent metadata
-- No block placement policy
+- No background rebalancing
 - No authentication or access control
 
 ## Roadmap
