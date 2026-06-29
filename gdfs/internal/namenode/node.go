@@ -9,8 +9,9 @@ import (
 )
 
 type NameNode struct {
-	store    *MetadataStore
-	registry *cluster.Registry
+	store     *MetadataStore
+	registry  *cluster.Registry
+	placement cluster.PlacementPolicy
 }
 
 func NewNameNode(store *MetadataStore) (*NameNode, error) {
@@ -19,8 +20,9 @@ func NewNameNode(store *MetadataStore) (*NameNode, error) {
 	}
 
 	return &NameNode{
-		store:    store,
-		registry: cluster.NewRegistry(),
+		store:     store,
+		registry:  cluster.NewRegistry(),
+		placement: cluster.NewLeastUsedPlacement(),
 	}, nil
 }
 
@@ -133,4 +135,15 @@ func (n *NameNode) EvaluateClusterHealth(ctx context.Context, now time.Time, cfg
 
 	n.registry.EvaluateHealth(now, cfg)
 	return nil
+}
+
+func (n *NameNode) AllocateBlock(ctx context.Context, blockSize uint64, replicas int) ([]cluster.DataNodeInfo, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	nodes := n.registry.AliveNodes()
+	return n.placement.Allocate(blockSize, replicas, nodes)
 }
