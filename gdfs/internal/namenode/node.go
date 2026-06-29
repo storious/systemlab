@@ -3,6 +3,7 @@ package namenode
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gdfs/internal/cluster"
 )
@@ -121,4 +122,15 @@ func (n *NameNode) Heartbeat(ctx context.Context, hb cluster.Heartbeat) error {
 	}
 
 	return n.registry.Heartbeat(hb)
+}
+
+func (n *NameNode) EvaluateClusterHealth(ctx context.Context, now time.Time, cfg cluster.HealthConfig) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	n.registry.EvaluateHealth(now, cfg)
+	return nil
 }
