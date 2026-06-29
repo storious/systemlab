@@ -4,10 +4,13 @@ import (
 	"context"
 	"io"
 
+	"gdfs/internal/cluster"
 	"gdfs/internal/namenode"
 )
 
 type MetadataClient interface {
+	AllocateBlock(ctx context.Context, blockSize uint64, replicas int) ([]cluster.DataNodeInfo, error)
+
 	PutFile(ctx context.Context, meta namenode.FileMetadata) (namenode.FileMetadata, error)
 	GetFile(ctx context.Context, path namenode.FilePath) (namenode.FileMetadata, error)
 	DeleteFile(ctx context.Context, path namenode.FilePath) error
