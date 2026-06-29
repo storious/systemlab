@@ -22,6 +22,13 @@ type AllocateBlockResponse struct {
 	DataNodes []cluster.DataNodeInfo `json:"datanodes"`
 }
 
+type HeartbeatRequest struct {
+	ID       cluster.DataNodeID `json:"id"`
+	Addr     string             `json:"addr"`
+	Capacity uint64             `json:"capacity"`
+	Used     uint64             `json:"used"`
+}
+
 func NewHTTPServer(node *NameNode) *HTTPServer {
 	s := &HTTPServer{
 		node: node,
@@ -38,6 +45,33 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) routes() {
 	s.mux.HandleFunc("/files/", s.handleFile)
 	s.mux.HandleFunc("/blocks/allocate", s.handleAllocateBlock)
+	s.mux.HandleFunc("/heartbeat", s.handleHeartbeat)
+}
+
+func (s *HTTPServer) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req HeartbeatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := s.node.Heartbeat(r.Context(), cluster.Heartbeat{
+		ID:       req.ID,
+		Addr:     req.Addr,
+		Capacity: req.Capacity,
+		Used:     req.Used,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *HTTPServer) handleFile(w http.ResponseWriter, r *http.Request) {

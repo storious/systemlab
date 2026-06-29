@@ -151,3 +151,37 @@ func (c *HTTPClient) AllocateBlock(ctx context.Context, blockSize uint64, replic
 
 	return out.DataNodes, nil
 }
+
+func (c *HTTPClient) Heartbeat(ctx context.Context, hb cluster.Heartbeat) error {
+	body, err := json.Marshal(HeartbeatRequest{
+		ID:       hb.ID,
+		Addr:     hb.Addr,
+		Capacity: hb.Capacity,
+		Used:     hb.Used,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.baseURL+"/heartbeat",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("heartbeat failed: status=%s", resp.Status)
+	}
+
+	return nil
+}

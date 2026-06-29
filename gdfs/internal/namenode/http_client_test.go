@@ -83,3 +83,27 @@ func TestHTTPClientAllocateBlock(t *testing.T) {
 	require.Len(t, nodes, 1)
 	require.Equal(t, cluster.DataNodeID("node-2"), nodes[0].ID)
 }
+
+func TestHTTPClientHeartbeat(t *testing.T) {
+	node, err := NewNameNode(NewMetadataStore())
+	require.NoError(t, err)
+
+	server := httptest.NewServer(NewHTTPServer(node))
+	defer server.Close()
+
+	client := NewHTTPClient(server.URL)
+	ctx := context.Background()
+
+	err = client.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-1",
+		Addr:     "http://localhost:9001",
+		Capacity: 1024,
+		Used:     128,
+	})
+	require.NoError(t, err)
+
+	nodes := node.AliveDataNodes(ctx)
+	require.Len(t, nodes, 1)
+	require.Equal(t, cluster.DataNodeID("node-1"), nodes[0].ID)
+	require.Equal(t, "http://localhost:9001", nodes[0].Addr)
+}
