@@ -25,10 +25,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	blockClient := datanode.NewHTTPClient(*datanodeAddr)
 	metaClient := namenode.NewHTTPClient(*namenodeAddr)
 
-	fs, err := client.NewDFSClient(*blockSize, blockClient, metaClient)
+	fs, err := client.NewDFSClient(
+		*blockSize,
+		1,
+		*datanodeAddr,
+		func(addr string) client.BlockClient {
+			return datanode.NewHTTPClient(addr)
+		},
+		metaClient,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

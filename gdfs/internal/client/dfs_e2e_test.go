@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"gdfs/internal/cluster"
 	"gdfs/internal/datanode"
 	"gdfs/internal/namenode"
 
@@ -81,7 +82,6 @@ func TestWriterReaderWithEmptyInput(t *testing.T) {
 	require.Equal(t, int64(0), n)
 	require.Equal(t, "", out.String())
 }
-
 func TestSingleNodeDFSClientEndToEnd(t *testing.T) {
 	ctx := context.Background()
 
@@ -95,13 +95,27 @@ func TestSingleNodeDFSClientEndToEnd(t *testing.T) {
 	nn, err := namenode.NewNameNode(namenode.NewMetadataStore())
 	require.NoError(t, err)
 
+	require.NoError(t, nn.RegisterDataNode(ctx, cluster.DataNodeInfo{
+		ID:       "node-1",
+		Addr:     dnServer.URL,
+		Capacity: 1024 * 1024,
+		Used:     0,
+	}))
+
 	nnServer := httptest.NewServer(namenode.NewHTTPServer(nn))
 	defer nnServer.Close()
 
-	blockClient := datanode.NewHTTPClient(dnServer.URL)
 	metadataClient := namenode.NewHTTPClient(nnServer.URL)
 
-	dfs, err := NewDFSClient(5, blockClient, metadataClient)
+	dfs, err := NewDFSClient(
+		5,
+		1,
+		dnServer.URL,
+		func(addr string) BlockClient {
+			return datanode.NewHTTPClient(addr)
+		},
+		metadataClient,
+	)
 	require.NoError(t, err)
 
 	input := "hello-world-from-gdfs"

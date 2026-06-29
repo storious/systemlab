@@ -1,10 +1,12 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"io"
 
 	"gdfs/internal/cluster"
+	"gdfs/internal/datanode"
 	"gdfs/internal/namenode"
 )
 
@@ -15,11 +17,15 @@ type MetadataClient interface {
 	GetFile(ctx context.Context, path namenode.FilePath) (namenode.FileMetadata, error)
 	DeleteFile(ctx context.Context, path namenode.FilePath) error
 }
+type BlockClientFactory func(addr string) BlockClient
 
 type DFSClient struct {
-	writer   *Writer
-	reader   *Reader
-	metadata MetadataClient
+	blockSize int64
+	replicas  int
+
+	defaultBlockAddr string
+	blocks           BlockClientFactory
+	metadata         MetadataClient
 }
 
 type BlockClient interface {
@@ -27,33 +33,37 @@ type BlockClient interface {
 	BlockReader
 }
 
-func NewDFSClient(blockSize int64, blocks BlockClient, metadata MetadataClient) (*DFSClient, error) {
+func NewDFSClient(blockSize int64, replicas int, defaultBlockAddr string, blocks BlockClientFactory, metadata MetadataClient) (*DFSClient, error) {
+	if blockSize <= 0 {
+		return nil, ErrInvalidBlockSize
+	}
+	if replicas <= 0 {
+		return nil, ErrInvalidReplicaCount
+	}
 	if blocks == nil {
-		return nil, ErrNilBlockClient
+		return nil, ErrNilBlockClientFactory
 	}
 	if metadata == nil {
 		return nil, ErrNilMetadataClient
 	}
 
-	writer, err := NewWriter(blockSize, blocks)
-	if err != nil {
-		return nil, err
-	}
-
-	reader, err := NewReader(blocks)
-	if err != nil {
-		return nil, err
-	}
-
 	return &DFSClient{
-		writer:   writer,
-		reader:   reader,
-		metadata: metadata,
+		blockSize:        blockSize,
+		replicas:         replicas,
+		blocks:           blocks,
+		metadata:         metadata,
+		defaultBlockAddr: defaultBlockAddr,
 	}, nil
 }
-
 func (c *DFSClient) PutFile(ctx context.Context, path namenode.FilePath, r io.Reader) (namenode.FileMetadata, error) {
-	result, err := c.writer.Write(ctx, r)
+	writer, err := NewWriter(c.blockSize, placementBlockWriter{
+		client: c,
+	})
+	if err != nil {
+		return namenode.FileMetadata{}, err
+	}
+
+	result, err := writer.Write(ctx, r)
 	if err != nil {
 		return namenode.FileMetadata{}, err
 	}
@@ -67,13 +77,56 @@ func (c *DFSClient) PutFile(ctx context.Context, path namenode.FilePath, r io.Re
 	return c.metadata.PutFile(ctx, meta)
 }
 
+type placementBlockWriter struct {
+	client *DFSClient
+}
+
+func (w placementBlockWriter) PutBlock(ctx context.Context, id datanode.BlockID, r io.Reader) (datanode.BlockInfo, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return datanode.BlockInfo{}, err
+	}
+
+	nodes, err := w.client.metadata.AllocateBlock(ctx, uint64(len(data)), w.client.replicas)
+	if err != nil {
+		return datanode.BlockInfo{}, err
+	}
+	if len(nodes) == 0 {
+		return datanode.BlockInfo{}, ErrNoAllocatedDataNodes
+	}
+
+	var info datanode.BlockInfo
+	for i, node := range nodes {
+		blockClient := w.client.blocks(node.Addr)
+		if blockClient == nil {
+			return datanode.BlockInfo{}, ErrNilBlockClient
+		}
+
+		written, err := blockClient.PutBlock(ctx, id, bytes.NewReader(data))
+		if err != nil {
+			return datanode.BlockInfo{}, err
+		}
+
+		if i == 0 {
+			info = written
+		}
+	}
+
+	return info, nil
+}
+
 func (c *DFSClient) GetFile(ctx context.Context, path namenode.FilePath, dst io.Writer) (int64, error) {
 	meta, err := c.metadata.GetFile(ctx, path)
 	if err != nil {
 		return 0, err
 	}
 
-	return c.reader.Read(ctx, meta.Blocks, dst)
+	reader, err := NewReader(c.blocks(c.defaultBlockAddr))
+	if err != nil {
+		return 0, err
+	}
+
+	return reader.Read(ctx, meta.Blocks, dst)
 }
 
 func (c *DFSClient) StatFile(ctx context.Context, path namenode.FilePath) (namenode.FileMetadata, error) {
