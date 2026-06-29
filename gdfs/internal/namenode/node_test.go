@@ -124,3 +124,41 @@ func TestNameNodeAllocateBlock(t *testing.T) {
 	require.Len(t, selected, 1)
 	require.Equal(t, cluster.DataNodeID("node-2"), selected[0].ID)
 }
+
+func TestNameNodeAllocateBlockUsesLatestHeartbeatUsage(t *testing.T) {
+	node, err := NewNameNode(NewMetadataStore())
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	require.NoError(t, node.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-1",
+		Addr:     "http://localhost:9001",
+		Capacity: 1000,
+		Used:     900,
+	}))
+
+	require.NoError(t, node.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-2",
+		Addr:     "http://localhost:9002",
+		Capacity: 1000,
+		Used:     100,
+	}))
+
+	selected, err := node.AllocateBlock(ctx, 100, 1)
+	require.NoError(t, err)
+	require.Len(t, selected, 1)
+	require.Equal(t, cluster.DataNodeID("node-2"), selected[0].ID)
+
+	require.NoError(t, node.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-2",
+		Addr:     "http://localhost:9002",
+		Capacity: 1000,
+		Used:     950,
+	}))
+
+	selected, err = node.AllocateBlock(ctx, 100, 1)
+	require.NoError(t, err)
+	require.Len(t, selected, 1)
+	require.Equal(t, cluster.DataNodeID("node-1"), selected[0].ID)
+}
