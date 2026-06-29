@@ -1,14 +1,7 @@
 package cluster
 
 import (
-	"errors"
 	"sort"
-)
-
-var (
-	ErrNoAliveDataNodes     = errors.New("no alive datanodes")
-	ErrNotEnoughDataNodes   = errors.New("not enough datanodes")
-	ErrInsufficientCapacity = errors.New("insufficient datanode capacity")
 )
 
 type PlacementPolicy interface {

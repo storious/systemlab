@@ -114,7 +114,7 @@ func stat(ctx context.Context, fs *client.DFSClient, remotePath string) {
 	fmt.Printf("blocks: %d\n", len(meta.Blocks))
 
 	for i, block := range meta.Blocks {
-		fmt.Printf("  [%d] id=%s size=%d checksum=%s\n", i, block.ID, block.Size, block.Checksum)
+		fmt.Printf("  [%d] id=%s size=%d checksum=%s\n", i, block.Info.ID, block.Info.Size, block.Info.Checksum)
 	}
 }
 

@@ -4,15 +4,26 @@ import (
 	"errors"
 	"sync"
 
+	"gdfs/internal/cluster"
 	"gdfs/internal/datanode"
 )
 
 type FilePath string
 
+type BlockReplica struct {
+	NodeID cluster.DataNodeID `json:"node_id"`
+	Addr   string             `json:"addr"`
+}
+
+type BlockMetadata struct {
+	Info     datanode.BlockInfo `json:"info"`
+	Replicas []BlockReplica     `json:"replicas"`
+}
+
 type FileMetadata struct {
-	Path   FilePath
-	Size   int64
-	Blocks []datanode.BlockInfo
+	Path   FilePath        `json:"path"`
+	Size   int64           `json:"size"`
+	Blocks []BlockMetadata `json:"blocks"`
 }
 
 type MetadataStore struct {

@@ -24,9 +24,17 @@ func TestHTTPClientPutGetDeleteFile(t *testing.T) {
 	meta := FileMetadata{
 		Path: "/docs/hello.txt",
 		Size: 11,
-		Blocks: []datanode.BlockInfo{
-			{ID: "block-001", Size: 5, Checksum: "a"},
-			{ID: "block-002", Size: 6, Checksum: "b"},
+		Blocks: []BlockMetadata{
+			{
+				Info: datanode.BlockInfo{
+					ID:       "block-001",
+					Size:     5,
+					Checksum: "a",
+				},
+				Replicas: []BlockReplica{
+					{NodeID: "node-1", Addr: "http://localhost:9001"},
+				},
+			},
 		},
 	}
 
