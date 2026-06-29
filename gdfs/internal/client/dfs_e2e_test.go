@@ -211,3 +211,88 @@ func TestDFSClientWritesTwoReplicasAndReadsFromFallbackReplica(t *testing.T) {
 	require.Equal(t, int64(len(input)), n)
 	require.Equal(t, input, out.String())
 }
+
+func TestDFSClientReplicatedWriteUpdatesDataNodeUsage(t *testing.T) {
+	ctx := context.Background()
+
+	dnStore1 := datanode.NewLocalBlockStore(t.TempDir())
+	dn1, err := datanode.NewDataNode("node-1", "127.0.0.1:0", dnStore1)
+	require.NoError(t, err)
+	dnServer1 := httptest.NewServer(datanode.NewHTTPServer(dn1))
+	defer dnServer1.Close()
+
+	dnStore2 := datanode.NewLocalBlockStore(t.TempDir())
+	dn2, err := datanode.NewDataNode("node-2", "127.0.0.1:0", dnStore2)
+	require.NoError(t, err)
+	dnServer2 := httptest.NewServer(datanode.NewHTTPServer(dn2))
+	defer dnServer2.Close()
+
+	nn, err := namenode.NewNameNode(namenode.NewMetadataStore())
+	require.NoError(t, err)
+
+	require.NoError(t, nn.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-1",
+		Addr:     dnServer1.URL,
+		Capacity: 1024 * 1024,
+		Used:     0,
+	}))
+	require.NoError(t, nn.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-2",
+		Addr:     dnServer2.URL,
+		Capacity: 1024 * 1024,
+		Used:     0,
+	}))
+
+	nnServer := httptest.NewServer(namenode.NewHTTPServer(nn))
+	defer nnServer.Close()
+
+	metadataClient := namenode.NewHTTPClient(nnServer.URL)
+
+	dfs, err := NewDFSClient(
+		5,
+		2,
+		func(addr string) BlockClient {
+			return datanode.NewHTTPClient(addr)
+		},
+		metadataClient,
+	)
+	require.NoError(t, err)
+
+	input := "hello-replicated-usage"
+
+	meta, err := dfs.PutFile(ctx, "/docs/usage.txt", strings.NewReader(input))
+	require.NoError(t, err)
+	require.NotEmpty(t, meta.Blocks)
+
+	for _, block := range meta.Blocks {
+		require.Len(t, block.Replicas, 2)
+	}
+
+	stats1, err := dn1.Stats()
+	require.NoError(t, err)
+	require.Equal(t, uint64(len(input)), stats1.Used)
+
+	stats2, err := dn2.Stats()
+	require.NoError(t, err)
+	require.Equal(t, uint64(len(input)), stats2.Used)
+
+	require.NoError(t, metadataClient.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-1",
+		Addr:     dnServer1.URL,
+		Capacity: stats1.Capacity,
+		Used:     stats1.Used,
+	}))
+	require.NoError(t, metadataClient.Heartbeat(ctx, cluster.Heartbeat{
+		ID:       "node-2",
+		Addr:     dnServer2.URL,
+		Capacity: stats2.Capacity,
+		Used:     stats2.Used,
+	}))
+
+	nodes := nn.ListDataNodes(ctx)
+	require.Len(t, nodes, 2)
+
+	for _, node := range nodes {
+		require.Equal(t, uint64(len(input)), node.Used)
+	}
+}
