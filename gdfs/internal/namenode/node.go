@@ -102,3 +102,13 @@ func (n *NameNode) UnregisterDataNode(ctx context.Context, id cluster.DataNodeID
 
 	n.registry.Unregister(id)
 }
+
+func (n *NameNode) AliveDataNodes(ctx context.Context) []cluster.DataNodeInfo {
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+	}
+
+	return n.registry.AliveNodes()
+}

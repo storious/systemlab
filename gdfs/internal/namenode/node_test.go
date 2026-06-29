@@ -74,3 +74,19 @@ func TestNameNodeRegisterListUnregisterDataNode(t *testing.T) {
 	_, ok = node.GetDataNode(ctx, "node-1")
 	require.False(t, ok)
 }
+
+func TestNameNodeAliveDataNodes(t *testing.T) {
+	node, err := NewNameNode(NewMetadataStore())
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	require.NoError(t, node.RegisterDataNode(ctx, cluster.DataNodeInfo{
+		ID:   "node-1",
+		Addr: "http://localhost:9001",
+	}))
+
+	alive := node.AliveDataNodes(ctx)
+	require.Len(t, alive, 1)
+	require.Equal(t, cluster.DataNodeID("node-1"), alive[0].ID)
+}
