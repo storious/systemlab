@@ -142,3 +142,72 @@ func TestSingleNodeDFSClientEndToEnd(t *testing.T) {
 	_, err = dfs.StatFile(ctx, "/docs/hello.txt")
 	require.Error(t, err)
 }
+
+func TestDFSClientWritesTwoReplicasAndReadsFromFallbackReplica(t *testing.T) {
+	ctx := context.Background()
+
+	dnStore1 := datanode.NewLocalBlockStore(t.TempDir())
+	dn1, err := datanode.NewDataNode("node-1", "127.0.0.1:0", dnStore1)
+	require.NoError(t, err)
+	dnServer1 := httptest.NewServer(datanode.NewHTTPServer(dn1))
+	defer dnServer1.Close()
+
+	dnStore2 := datanode.NewLocalBlockStore(t.TempDir())
+	dn2, err := datanode.NewDataNode("node-2", "127.0.0.1:0", dnStore2)
+	require.NoError(t, err)
+	dnServer2 := httptest.NewServer(datanode.NewHTTPServer(dn2))
+	defer dnServer2.Close()
+
+	nn, err := namenode.NewNameNode(namenode.NewMetadataStore())
+	require.NoError(t, err)
+
+	require.NoError(t, nn.RegisterDataNode(ctx, cluster.DataNodeInfo{
+		ID:       "node-1",
+		Addr:     dnServer1.URL,
+		Capacity: 1024 * 1024,
+		Used:     0,
+	}))
+	require.NoError(t, nn.RegisterDataNode(ctx, cluster.DataNodeInfo{
+		ID:       "node-2",
+		Addr:     dnServer2.URL,
+		Capacity: 1024 * 1024,
+		Used:     0,
+	}))
+
+	nnServer := httptest.NewServer(namenode.NewHTTPServer(nn))
+	defer nnServer.Close()
+
+	metadataClient := namenode.NewHTTPClient(nnServer.URL)
+
+	dfs, err := NewDFSClient(
+		5,
+		2,
+		func(addr string) BlockClient {
+			return datanode.NewHTTPClient(addr)
+		},
+		metadataClient,
+	)
+	require.NoError(t, err)
+
+	input := "hello-world-from-replicated-gdfs"
+
+	meta, err := dfs.PutFile(ctx, "/docs/replicated.txt", strings.NewReader(input))
+	require.NoError(t, err)
+	require.NotEmpty(t, meta.Blocks)
+
+	for _, block := range meta.Blocks {
+		require.Len(t, block.Replicas, 2)
+	}
+
+	for _, block := range meta.Blocks {
+		require.NoError(t, dnStore1.Delete(ctx, block.Info.ID))
+	}
+
+	var out bytes.Buffer
+
+	n, err := dfs.GetFile(ctx, "/docs/replicated.txt", &out)
+	require.NoError(t, err)
+
+	require.Equal(t, int64(len(input)), n)
+	require.Equal(t, input, out.String())
+}
