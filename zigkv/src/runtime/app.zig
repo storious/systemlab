@@ -9,12 +9,18 @@ const clock = @import("../core/clock.zig");
 pub const App = struct {
     allocator: std.mem.Allocator,
     store: Store,
+    now_ms: i64,
 
     pub fn init(allocator: std.mem.Allocator) App {
         return .{
             .allocator = allocator,
             .store = Store.init(allocator),
+            .now_ms = 0,
         };
+    }
+
+    pub fn setNow(self: *App, now_ms: i64) void {
+        self.now_ms = now_ms;
     }
 
     pub fn deinit(self: *App) void {
@@ -27,9 +33,7 @@ pub const App = struct {
         };
 
         var exec = engine.Engine.init(&self.store);
-        const fixed_clock = clock.Clock.fixed(0);
-
-        return exec.executeAt(self.allocator, cmd, fixed_clock.now());
+        return exec.executeAt(self.allocator, cmd, self.now_ms);
     }
 };
 
@@ -67,5 +71,31 @@ test "app executes set and get in same instance" {
         const resp = try app.executeText("GET name");
         defer std.testing.allocator.free(resp);
         try std.testing.expectEqualStrings("$zigkv\r\n", resp);
+    }
+}
+
+test "app respects logical time for ttl" {
+    var app = App.init(std.testing.allocator);
+    defer app.deinit();
+
+    app.setNow(1000);
+    {
+        const resp = try app.executeText("SETEX tmp 10 value");
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+
+    app.setNow(1009);
+    {
+        const resp = try app.executeText("GET tmp");
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("$value\r\n", resp);
+    }
+
+    app.setNow(1010);
+    {
+        const resp = try app.executeText("GET tmp");
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("$nil\r\n", resp);
     }
 }
