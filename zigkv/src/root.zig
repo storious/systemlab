@@ -35,6 +35,6 @@ test {
     _ = @import("core/engine.zig");
     _ = @import("core/clock.zig");
     _ = @import("core/response.zig");
-    _ = @import("runtime/app.zig");
     _ = @import("core/protocol.zig");
+    _ = @import("runtime/app.zig");
 }
