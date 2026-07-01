@@ -70,7 +70,7 @@ pub const Engine = struct {
             },
 
             .keys => blk: {
-                const keys = try self.store.keys(allocator);
+                const keys = try self.store.keysAt(allocator, now_ms);
                 defer Store.freeKeys(allocator, keys);
 
                 break :blk try response.list(allocator, keys);
@@ -302,4 +302,18 @@ test "engine keys" {
         try std.testing.expect(std.mem.endsWith(u8, resp, "\r\n"));
         try std.testing.expect(std.mem.indexOf(u8, resp, "a") != null);
     }
+}
+
+test "keysAt excludes expired keys" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    try store.setAt("alive", "1", 1000, 20);
+    try store.setAt("expired", "2", 1000, 10);
+
+    const ks = try store.keysAt(std.testing.allocator, 1010);
+    defer Store.freeKeys(std.testing.allocator, ks);
+
+    try std.testing.expectEqual(@as(usize, 1), ks.len);
+    try std.testing.expectEqualStrings("alive", ks[0]);
 }

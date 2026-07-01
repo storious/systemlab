@@ -130,26 +130,32 @@ pub const Store = struct {
         return false;
     }
 
-    pub fn keys(self: *Store, allocator: std.mem.Allocator) ![][]u8 {
+    pub fn keysAt(self: *Store, allocator: std.mem.Allocator, now_ms: i64) ![][]u8 {
         var out = std.ArrayList([]u8){
             .items = &.{},
             .capacity = 0,
         };
 
         errdefer {
-            for (out.items) |key| {
-                allocator.free(key);
-            }
+            for (out.items) |key| allocator.free(key);
             out.deinit(allocator);
         }
 
         var it = self.map.iterator();
         while (it.next()) |kv| {
+            if (kv.value_ptr.expires_at_ms) |deadline| {
+                if (now_ms >= deadline) continue;
+            }
+
             const key_copy = try allocator.dupe(u8, kv.key_ptr.*);
             try out.append(allocator, key_copy);
         }
 
         return out.toOwnedSlice(allocator);
+    }
+
+    pub fn keys(self: *Store, allocator: std.mem.Allocator) ![][]u8 {
+        return self.keysAt(allocator, 0);
     }
 
     pub fn freeKeys(allocator: std.mem.Allocator, keys_slice: [][]u8) void {
