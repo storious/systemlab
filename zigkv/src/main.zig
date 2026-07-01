@@ -1,46 +1,8 @@
 const std = @import("std");
 const zigkv = @import("zigkv");
 
-fn collectInput(
-    allocator: std.mem.Allocator,
-    init: std.process.Init,
-) ![]u8 {
-    const args = try init.minimal.args.toSlice(init.arena.allocator());
-
-    if (args.len <= 1) {
-        return allocator.dupe(u8, "PING");
-    }
-
-    return std.mem.join(allocator, " ", args[1..]);
-}
-
 pub fn main(init: std.process.Init) !void {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    const allocator = gpa.allocator();
-
-    const input = try collectInput(allocator, init);
-    defer allocator.free(input);
-
-    var store = zigkv.Store.init(allocator);
-    defer store.deinit();
-
-    var engine = zigkv.engine.Engine.init(&store);
-    const clock = zigkv.clock.Clock.fixed(0);
-
-    const cmd = zigkv.command.parse(input) catch |err| {
-        std.debug.print("-ERR {s}\r\n", .{@errorName(err)});
-        return;
-    };
-
-    const resp = engine.executeAt(allocator, cmd, clock.now()) catch |err| {
-        std.debug.print("-ERR {s}\r\n", .{@errorName(err)});
-        return;
-    };
-    defer allocator.free(resp);
-
-    try std.Io.File.stdout().writeStreamingAll(init.io, resp);
+    try zigkv.runtime.cli.run(init);
 }
 
 test "simple test" {

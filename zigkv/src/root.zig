@@ -23,10 +23,14 @@ pub const engine = @import("core/engine.zig");
 pub const response = @import("core/response.zig");
 pub const clock = @import("core/clock.zig");
 
+pub const runtime = struct {
+    pub const cli = @import("runtime/cli.zig");
+};
+
 test {
-    _ = @import("store.zig");
-    _ = @import("command.zig");
-    _ = @import("engine.zig");
-    _ = @import("clock.zig");
-    _ = @import("response.zig");
+    _ = @import("core/store.zig");
+    _ = @import("core/command.zig");
+    _ = @import("core/engine.zig");
+    _ = @import("core/clock.zig");
+    _ = @import("core/response.zig");
 }
