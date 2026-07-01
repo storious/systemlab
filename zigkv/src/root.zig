@@ -17,11 +17,11 @@ test "basic add functionality" {
     try std.testing.expect(add(3, 7) == 10);
 }
 
-pub const Store = @import("store.zig").Store;
-pub const command = @import("command.zig");
-pub const engine = @import("engine.zig");
-pub const clock = @import("clock.zig");
-pub const response = @import("response.zig");
+pub const Store = @import("core/store.zig").Store;
+pub const command = @import("core/command.zig");
+pub const engine = @import("core/engine.zig");
+pub const response = @import("core/response.zig");
+pub const clock = @import("core/clock.zig");
 
 test {
     _ = @import("store.zig");
