@@ -234,3 +234,52 @@ test "parse dbsize" {
     const cmd = try parse("DBSIZE");
     try std.testing.expect(cmd == .dbsize);
 }
+
+test "parse all supported commands" {
+    try std.testing.expect((try parse("PING")) == .ping);
+    try std.testing.expect((try parse("CLEAR")) == .clear);
+    try std.testing.expect((try parse("KEYS")) == .keys);
+    try std.testing.expect((try parse("DBSIZE")) == .dbsize);
+
+    switch (try parse("GET a")) {
+        .get => |key| try std.testing.expectEqualStrings("a", key),
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("SET a 1")) {
+        .set => |args| {
+            try std.testing.expectEqualStrings("a", args.key);
+            try std.testing.expectEqualStrings("1", args.value);
+        },
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("DEL a")) {
+        .del => |key| try std.testing.expectEqualStrings("a", key),
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("EXISTS a")) {
+        .exists => |key| try std.testing.expectEqualStrings("a", key),
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("SETEX a 10 1")) {
+        .setex => |args| {
+            try std.testing.expectEqualStrings("a", args.key);
+            try std.testing.expectEqual(@as(i64, 10), args.ttl_ms);
+            try std.testing.expectEqualStrings("1", args.value);
+        },
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("TTL a")) {
+        .ttl => |key| try std.testing.expectEqualStrings("a", key),
+        else => return error.UnexpectedCommand,
+    }
+
+    switch (try parse("PERSIST a")) {
+        .persist => |key| try std.testing.expectEqualStrings("a", key),
+        else => return error.UnexpectedCommand,
+    }
+}
