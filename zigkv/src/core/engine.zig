@@ -362,3 +362,77 @@ test "engine dbsize" {
         try std.testing.expectEqualStrings(":1\r\n", resp);
     }
 }
+
+test "engine executes all supported commands" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    var engine = Engine.init(&store);
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("PING"), 0);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+PONG\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("SET a 1"), 1000);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("GET a"), 1000);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("$1\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("EXISTS a"), 1000);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings(":1\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("SETEX tmp 10 v"), 1000);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("TTL tmp"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings(":5\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("PERSIST tmp"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings(":1\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("KEYS"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expect(std.mem.indexOf(u8, resp, "a") != null);
+        try std.testing.expect(std.mem.indexOf(u8, resp, "tmp") != null);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("DBSIZE"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings(":2\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("DEL a"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings(":1\r\n", resp);
+    }
+
+    {
+        const resp = try engine.executeAt(std.testing.allocator, try command.parse("CLEAR"), 1005);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+}
