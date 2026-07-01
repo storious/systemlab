@@ -1,10 +1,9 @@
 const std = @import("std");
 
 const Store = @import("../core/store.zig").Store;
-const command = @import("../core/command.zig");
 const engine = @import("../core/engine.zig");
-const response = @import("../core/response.zig");
 const clock = @import("../core/clock.zig");
+const protocol = @import("../core/protocol.zig");
 
 pub const App = struct {
     allocator: std.mem.Allocator,
@@ -28,8 +27,8 @@ pub const App = struct {
     }
 
     pub fn executeText(self: *App, input: []const u8) ![]u8 {
-        const cmd = command.parse(input) catch |err| {
-            return response.err(self.allocator, @errorName(err));
+        const cmd = protocol.parse(input) catch |err| {
+            return protocol.formatError(self.allocator, err);
         };
 
         var exec = engine.Engine.init(&self.store);

@@ -22,6 +22,7 @@ pub const command = @import("core/command.zig");
 pub const engine = @import("core/engine.zig");
 pub const response = @import("core/response.zig");
 pub const clock = @import("core/clock.zig");
+pub const protocol = @import("core/protocol.zig");
 
 pub const runtime = struct {
     pub const cli = @import("runtime/cli.zig");
@@ -35,4 +36,5 @@ test {
     _ = @import("core/clock.zig");
     _ = @import("core/response.zig");
     _ = @import("runtime/app.zig");
+    _ = @import("core/protocol.zig");
 }
