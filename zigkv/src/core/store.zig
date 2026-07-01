@@ -202,3 +202,19 @@ test "store reports length" {
 
     try std.testing.expectEqual(@as(usize, 1), store.len());
 }
+
+test "clear removes all keys" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    try store.set("a", "1", null);
+    try store.set("b", "2", null);
+
+    try std.testing.expectEqual(@as(usize, 2), store.len());
+
+    store.clear();
+
+    try std.testing.expect(store.isEmpty());
+    try std.testing.expect(store.get("a") == null);
+    try std.testing.expect(store.get("b") == null);
+}

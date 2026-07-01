@@ -178,3 +178,25 @@ test "engine exists and delete" {
         try std.testing.expectEqualStrings(":0\r\n", resp);
     }
 }
+
+test "engine clear" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    var engine = Engine.init(&store);
+
+    {
+        const cmd = try command.parse("SET a 1");
+        const resp = try engine.executeAt(std.testing.allocator, cmd, 0);
+        defer std.testing.allocator.free(resp);
+    }
+
+    {
+        const cmd = try command.parse("CLEAR");
+        const resp = try engine.executeAt(std.testing.allocator, cmd, 0);
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+
+    try std.testing.expect(store.isEmpty());
+}

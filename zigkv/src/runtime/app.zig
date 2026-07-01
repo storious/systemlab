@@ -122,3 +122,23 @@ test "app exposes store size" {
     try std.testing.expect(!app.isEmpty());
     try std.testing.expectEqual(@as(usize, 1), app.len());
 }
+
+test "app clears store" {
+    var app = App.init(std.testing.allocator);
+    defer app.deinit();
+
+    {
+        const resp = try app.executeText("SET a 1");
+        defer std.testing.allocator.free(resp);
+    }
+
+    try std.testing.expectEqual(@as(usize, 1), app.len());
+
+    {
+        const resp = try app.executeText("CLEAR");
+        defer std.testing.allocator.free(resp);
+        try std.testing.expectEqualStrings("+OK\r\n", resp);
+    }
+
+    try std.testing.expect(app.isEmpty());
+}

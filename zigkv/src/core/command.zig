@@ -171,3 +171,8 @@ test "reject invalid arity" {
 test "reject invalid setex ttl" {
     try std.testing.expectError(ParseError.InvalidInteger, parse("SETEX tmp abc value"));
 }
+
+test "parse clear" {
+    const cmd = try parse("CLEAR");
+    try std.testing.expect(cmd == .clear);
+}
