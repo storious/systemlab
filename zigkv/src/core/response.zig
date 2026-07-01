@@ -28,15 +28,11 @@ pub fn integerValue(allocator: std.mem.Allocator, value: i64) ![]u8 {
     return std.fmt.allocPrint(allocator, ":{d}\r\n", .{value});
 }
 
-fn emptyByteList() std.ArrayList(u8) {
-    return .{
+pub fn list(allocator: std.mem.Allocator, items: []const []const u8) ![]u8 {
+    var out = std.ArrayList(u8){
         .items = &.{},
         .capacity = 0,
     };
-}
-
-pub fn list(allocator: std.mem.Allocator, items: []const []const u8) ![]u8 {
-    var out = emptyByteList();
     defer out.deinit(allocator);
 
     try out.append(allocator, '$');
@@ -56,4 +52,57 @@ test "format list response" {
     defer std.testing.allocator.free(resp);
 
     try std.testing.expectEqualStrings("$a b\r\n", resp);
+}
+
+test "format ok response" {
+    const resp = try ok(std.testing.allocator);
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings("+OK\r\n", resp);
+}
+
+test "format pong response" {
+    const resp = try pong(std.testing.allocator);
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings("+PONG\r\n", resp);
+}
+
+test "format nil response" {
+    const resp = try nil(std.testing.allocator);
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings("$nil\r\n", resp);
+}
+
+test "format bulk response" {
+    const resp = try bulk(std.testing.allocator, "zigkv");
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings("$zigkv\r\n", resp);
+}
+
+test "format integer bool response" {
+    const yes = try integer(std.testing.allocator, true);
+    defer std.testing.allocator.free(yes);
+
+    const no = try integer(std.testing.allocator, false);
+    defer std.testing.allocator.free(no);
+
+    try std.testing.expectEqualStrings(":1\r\n", yes);
+    try std.testing.expectEqualStrings(":0\r\n", no);
+}
+
+test "format integer value response" {
+    const resp = try integerValue(std.testing.allocator, -2);
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings(":-2\r\n", resp);
+}
+
+test "format error response" {
+    const resp = try err(std.testing.allocator, "UnknownCommand");
+    defer std.testing.allocator.free(resp);
+
+    try std.testing.expectEqualStrings("-ERR UnknownCommand\r\n", resp);
 }
