@@ -420,3 +420,18 @@ test "lenAt removes expired keys" {
     try std.testing.expectEqual(@as(usize, 1), try store.lenAt(std.testing.allocator, 1010));
     try std.testing.expectEqual(@as(usize, 1), store.len());
 }
+
+test "cleanupExpiredAt returns removed count" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    try store.setAt("alive", "1", 1000, 20);
+    try store.setAt("expired1", "2", 1000, 10);
+    try store.setAt("expired2", "3", 1000, 5);
+
+    const removed = try store.cleanupExpiredAt(std.testing.allocator, 1010);
+
+    try std.testing.expectEqual(@as(usize, 2), removed);
+    try std.testing.expectEqual(@as(usize, 1), store.len());
+    try std.testing.expectEqualStrings("1", store.getAt("alive", 1010).?);
+}
