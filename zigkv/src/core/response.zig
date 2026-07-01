@@ -28,11 +28,15 @@ pub fn integerValue(allocator: std.mem.Allocator, value: i64) ![]u8 {
     return std.fmt.allocPrint(allocator, ":{d}\r\n", .{value});
 }
 
-pub fn list(allocator: std.mem.Allocator, items: []const []const u8) ![]u8 {
-    var out = std.ArrayList(u8){
+fn emptyByteList() std.ArrayList(u8) {
+    return .{
         .items = &.{},
         .capacity = 0,
     };
+}
+
+pub fn list(allocator: std.mem.Allocator, items: []const []const u8) ![]u8 {
+    var out = emptyByteList();
     defer out.deinit(allocator);
 
     try out.append(allocator, '$');
