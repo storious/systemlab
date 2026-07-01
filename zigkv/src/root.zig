@@ -25,6 +25,7 @@ pub const clock = @import("core/clock.zig");
 
 pub const runtime = struct {
     pub const cli = @import("runtime/cli.zig");
+    pub const app = @import("runtime/app.zig");
 };
 
 test {

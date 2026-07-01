@@ -1,10 +1,5 @@
 const std = @import("std");
-
-const Store = @import("../core/store.zig").Store;
-const Command = @import("../core/command.zig");
-const Engine = @import("../core/engine.zig");
-const Response = @import("../core/response.zig");
-const Clock = @import("../core/clock.zig");
+const App = @import("app.zig").App;
 
 fn collectInput(
     allocator: std.mem.Allocator,
@@ -28,25 +23,10 @@ pub fn run(init: std.process.Init) !void {
     const input = try collectInput(allocator, init);
     defer allocator.free(input);
 
-    var store = Store.init(allocator);
-    defer store.deinit();
+    var app = App.init(allocator);
+    defer app.deinit();
 
-    var engine = Engine.Engine.init(&store);
-    const clock = Clock.Clock.fixed(0);
-
-    const cmd = Command.parse(input) catch |err| {
-        const resp = try Response.err(allocator, @errorName(err));
-        defer allocator.free(resp);
-        try std.Io.File.stdout().writeStreamingAll(init.io, resp);
-        return;
-    };
-
-    const resp = engine.executeAt(allocator, cmd, clock.now()) catch |err| {
-        const err_resp = try Response.err(allocator, @errorName(err));
-        defer allocator.free(err_resp);
-        try std.Io.File.stdout().writeStreamingAll(init.io, err_resp);
-        return;
-    };
+    const resp = try app.executeText(input);
     defer allocator.free(resp);
 
     try std.Io.File.stdout().writeStreamingAll(init.io, resp);
