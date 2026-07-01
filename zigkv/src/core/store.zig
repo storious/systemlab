@@ -175,8 +175,12 @@ pub const Store = struct {
         for (expired.items) |key| {
             _ = self.delete(key);
         }
-
+        std.mem.sort([]u8, out.items, {}, lessThan);
         return out.toOwnedSlice(allocator);
+    }
+
+    fn lessThan(_: void, a: []u8, b: []u8) bool {
+        return std.mem.lessThan(u8, a, b);
     }
 
     pub fn keys(self: *Store, allocator: std.mem.Allocator) ![][]u8 {
@@ -383,4 +387,18 @@ test "keysAt excludes and removes expired keys" {
     try std.testing.expectEqualStrings("alive", ks[0]);
     try std.testing.expectEqual(@as(usize, 1), store.len());
     try std.testing.expect(store.getAt("expired", 1010) == null);
+}
+
+test "keysAt returns keys in sorted order" {
+    var store = Store.init(std.testing.allocator);
+    defer store.deinit();
+
+    try store.set("b", "2", null);
+    try store.set("a", "1", null);
+
+    const ks = try store.keysAt(std.testing.allocator, 0);
+    defer Store.freeKeys(std.testing.allocator, ks);
+
+    try std.testing.expectEqualStrings("a", ks[0]);
+    try std.testing.expectEqualStrings("b", ks[1]);
 }
