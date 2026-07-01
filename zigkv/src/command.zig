@@ -124,3 +124,43 @@ test "parse setex" {
 test "reject unknown command" {
     try std.testing.expectError(ParseError.UnknownCommand, parse("HELLO"));
 }
+
+test "parse command case insensitive" {
+    const cmd = try parse("get Name");
+
+    switch (cmd) {
+        .get => |key| try std.testing.expectEqualStrings("Name", key),
+        else => return error.UnexpectedCommand,
+    }
+}
+
+test "parse trims whitespace" {
+    const cmd = try parse("  SET   name   zigkv  \r\n");
+
+    switch (cmd) {
+        .set => |args| {
+            try std.testing.expectEqualStrings("name", args.key);
+            try std.testing.expectEqualStrings("zigkv", args.value);
+        },
+        else => return error.UnexpectedCommand,
+    }
+}
+
+test "reject empty command" {
+    try std.testing.expectError(ParseError.EmptyCommand, parse(""));
+    try std.testing.expectError(ParseError.EmptyCommand, parse("   \r\n"));
+}
+
+test "reject invalid arity" {
+    try std.testing.expectError(ParseError.InvalidArity, parse("GET"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("GET a b"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("SET a"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("SET a b c"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("DEL"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("EXISTS"));
+    try std.testing.expectError(ParseError.InvalidArity, parse("PING extra"));
+}
+
+test "reject invalid setex ttl" {
+    try std.testing.expectError(ParseError.InvalidInteger, parse("SETEX tmp abc value"));
+}
